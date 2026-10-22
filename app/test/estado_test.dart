@@ -1,0 +1,79 @@
+import 'package:comandas/dados/estado.dart';
+import 'package:comandas/dados/modelos.dart';
+import 'package:comandas/impressao/cupons.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+var _n = 0;
+Map<String, dynamic> ev(String tipo, Map<String, dynamic> dados, {String dev = 'cel1', int? hora}) => {
+      'uuid': 'ev-${_n++}',
+      'tipo': tipo,
+      'device_id': dev,
+      'usuario': 'João',
+      'hora': hora ?? DateTime.now().millisecondsSinceEpoch,
+      'dados': dados,
+    };
+
+Map<String, dynamic> item(String id, String produto, int preco, {int qtd = 1, String setor = '', bool imprime = false}) =>
+    {'item': id, 'produto': produto, 'variante': '', 'preco': preco, 'qtd': qtd, 'setor': setor, 'imprime': imprime};
+
+void main() {
+  test('pedido chega antes da abertura da comanda e é encaixado', () {
+    final e = Estado.montar([
+      ev('pedido_lancado', {'pedido': 'p1', 'comanda': 'c1', 'itens': [item('i1', 'Batata', 2200, qtd: 2)]}),
+      ev('comanda_aberta', {'comanda': 'c1', 'numero': 15, 'nome': 'Ana'}),
+    ]);
+    expect(e.comandas['c1']!.subtotal, 4400);
+  });
+
+  test('duas comandas com o mesmo número ficam em conflito até uma fechar', () {
+    final evs = [
+      ev('comanda_aberta', {'comanda': 'a', 'numero': 15, 'nome': 'Ana'}, dev: 'cel1'),
+      ev('comanda_aberta', {'comanda': 'b', 'numero': 15, 'nome': 'Bia'}, dev: 'cel2'),
+    ];
+    var e = Estado.montar(evs);
+    expect(e.emConflito(e.comandas['a']!), isTrue);
+    expect(e.emConflito(e.comandas['b']!), isTrue);
+    evs.add(ev('comanda_fechada', {'comanda': 'a', 'total': 0}));
+    e = Estado.montar(evs);
+    expect(e.emConflito(e.comandas['b']!), isFalse);
+  });
+
+  test('itens que não imprimem não geram cupom; cada setor gera o seu', () {
+    final e = Estado.montar([
+      ev('comanda_aberta', {'comanda': 'c1', 'numero': 1, 'nome': 'X'}),
+      ev('pedido_lancado', {
+        'pedido': 'p1',
+        'comanda': 'c1',
+        'itens': [
+          item('i1', 'Brahma', 1000),
+          item('i2', 'Batata', 3500, setor: 'Cozinha', imprime: true),
+          item('i3', 'Espetinho', 1000, qtd: 3, setor: 'Churrasqueira', imprime: true),
+        ],
+      }),
+    ]);
+    final pend = e.cuponsPendentes(meu: (_) => true);
+    expect(pend.map((x) => x.$2).toSet(), {'Cozinha', 'Churrasqueira'});
+
+    final bar = BarCfg.json({'id': 1, 'nome': 'Bar', 'slug': 'b'});
+    final c = e.comandas['c1']!;
+    final cozinha = String.fromCharCodes(cupomPedido(bar, c, e.pedidos['p1']!, 'Cozinha'));
+    expect(cozinha, contains('Batata'));
+    expect(cozinha, isNot(contains('Espetinho')));
+    expect(cozinha, isNot(contains('Brahma')));
+  });
+
+  test('impresso some da lista de pendentes; cancelado sai da conta', () {
+    final e = Estado.montar([
+      ev('comanda_aberta', {'comanda': 'c1', 'numero': 1, 'nome': 'X'}),
+      ev('pedido_lancado', {
+        'pedido': 'p1',
+        'comanda': 'c1',
+        'itens': [item('i1', 'Batata', 3500, setor: 'Cozinha', imprime: true), item('i2', 'Brahma', 1000, qtd: 2)],
+      }),
+      ev('impresso', {'ref': 'p1:Cozinha', 'setor': 'Cozinha'}),
+      ev('item_cancelado', {'item': 'i2', 'autorizado_por': 'Zé'}),
+    ]);
+    expect(e.cuponsPendentes(meu: (_) => true), isEmpty);
+    expect(e.comandas['c1']!.subtotal, 3500);
+  });
+}
