@@ -29,6 +29,7 @@ class Par {
   int vistoMs = 0; // última conversa que deu certo
   int conhecidoMs = 0; // última vez que alguém falou dele (UDP, mDNS, VPS)
   int falhas = 0;
+  int pendentes = 0; // registros que só ele tem (nem no líder, nem na VPS)
   final Set<String> origens = {};
   int cursorBaixar = 0; // último id do banco DELE que eu já tenho
   int cursorEnviar = 0; // último id do MEU banco que ele já tem
@@ -129,6 +130,9 @@ class RedeLocal {
 
   Future<void> parar() async {
     if (!ativa) return;
+    // avisa os outros que saiu de propósito
+    final tchau = {..._minhaInfo(), 'saindo': true};
+    await Future.wait([for (final p in vivos()) _oi(p, tchau)]).timeout(const Duration(seconds: 3), onTimeout: () => []);
     ativa = false;
     _timer?.cancel();
     await _srv?.close(force: true);
@@ -171,11 +175,16 @@ class RedeLocal {
         'lider': eleicao.lider,
         'bateria': app.bateria,
         'carregando': app.carregando,
+        'pendentes': app.naFila,
       };
 
   void _atualizarPar(Map<String, dynamic> j, String? ip) {
     final id = j['id'] as String?;
     if (id == null || id == eu || j['bar'] != _bar) return;
+    if (j['saindo'] == true) {
+      pares.remove(id); // encerrou o turno: não é "sumiu"
+      return;
+    }
     final p = pares.putIfAbsent(id, () => Par(id, ip ?? '', (j['porta'] ?? portaLan) as int));
     if (ip != null && ip.isNotEmpty) p.ip = ip;
     p.porta = (j['porta'] ?? p.porta) as int;
@@ -187,6 +196,7 @@ class RedeLocal {
     p.lider = j['lider'] as String?;
     p.bateria = j['bateria'] as int?;
     p.carregando = j['carregando'] == true;
+    p.pendentes = (j['pendentes'] ?? 0) as int;
     p.vistoMs = agoraMs();
     p.falhas = 0;
     p.origens.add('rede');

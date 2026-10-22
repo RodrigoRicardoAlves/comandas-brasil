@@ -40,6 +40,8 @@ class Comanda(models.Model):
     taxa_servico = models.DecimalField(max_digits=4, decimal_places=1, default=0)
     total_centavos = models.IntegerField(null=True, blank=True)
     descartada = models.BooleanField(default=False)
+    juntada_para = models.CharField(max_length=36, blank=True, help_text='Conflito resolvido juntando nesta comanda (uuid)')
+    conhecidos = models.JSONField(null=True, blank=True, help_text='Pedidos que quem fechou conhecia')
 
     class Meta:
         ordering = ['-aberta_em']
@@ -60,6 +62,8 @@ class Pedido(models.Model):
     feito_em = models.DateTimeField()
     garcom = models.CharField(max_length=40)
     offline = models.BooleanField(default=False)
+    SITUACOES = [('', 'normal'), ('pendente', 'atrasado: aguarda o gerente'), ('descartado', 'descartado pelo gerente')]
+    situacao = models.CharField(max_length=12, blank=True, default='', choices=SITUACOES)
 
     class Meta:
         ordering = ['feito_em']

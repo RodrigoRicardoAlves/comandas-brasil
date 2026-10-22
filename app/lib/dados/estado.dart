@@ -3,10 +3,11 @@
 library;
 
 class ItemC {
-  final String uuid, pedido, comanda, categoria, produto, variante, setor, obs, garcom;
+  final String uuid, pedido, categoria, produto, variante, setor, obs, garcom;
   final int? varianteId;
   final int preco, qtd, hora;
   final bool imprime, offline;
+  String comanda; // muda se o pedido for movido para outra comanda
   bool cancelado = false;
   String canceladoPor = '';
 
@@ -33,11 +34,19 @@ class ItemC {
 }
 
 class PedidoC {
-  final String uuid, comanda, garcom, deviceId;
+  final String uuid, garcom, deviceId;
+  String comanda;
   final int hora;
   final bool offline;
   final List<ItemC> itens = [];
+
+  /// Chegou depois de a comanda ser fechada: espera o gerente decidir (mover, reabrir ou descartar).
+  bool pendente = false;
+  bool descartado = false;
   PedidoC(this.uuid, this.comanda, this.garcom, this.deviceId, this.hora, this.offline);
+
+  /// Entra na conta da comanda.
+  bool get conta => !pendente && !descartado;
 
   /// Setores que precisam de cupom neste pedido.
   Set<String> get setores => {for (final i in itens) if (i.imprime) i.setor};
@@ -54,12 +63,14 @@ class ComandaC {
   int? total;
   bool descartada = false;
   bool contaImpressa = false;
+  String? juntadaEm; // uuid da comanda que recebeu os pedidos desta
+  Set<String>? noFechamento; // pedidos que quem fechou conhecia
   final List<PedidoC> pedidos = [];
 
   ComandaC(this.uuid, this.numero, this.nome, this.abertaEm, this.abertaPor, this.deviceId);
 
   bool get aberta => fechadaEm == null && !descartada;
-  Iterable<ItemC> get itens => pedidos.expand((p) => p.itens);
+  Iterable<ItemC> get itens => pedidos.where((p) => p.conta).expand((p) => p.itens);
   Iterable<ItemC> get itensAtivos => itens.where((i) => !i.cancelado);
   int get subtotal => itensAtivos.fold(0, (s, i) => s + i.total);
   int get quantidade => itensAtivos.fold(0, (s, i) => s + i.qtd);
@@ -81,6 +92,7 @@ class Estado {
   final Map<String, ItemC> itens = {};
   final Set<String> impressos = {}; // "pedido:setor"
   final Set<String> chamadosAtendidos = {};
+  final Map<String, Map<String, dynamic>> _resolucoes = {}; // pedido -> {acao, para}
 
   /// Os eventos vêm de vários celulares e podem chegar fora de ordem: são aplicados pela hora
   /// em que aconteceram, e um evento que cita uma comanda/item ainda desconhecido espera por ele.
@@ -95,8 +107,45 @@ class Estado {
     for (final (_, ev) in ordem) {
       e._aplicar(ev, esperando);
     }
+    e._finalizar();
     return e;
   }
+
+  void _mover(PedidoC p, ComandaC para) {
+    if (p.comanda == para.uuid) return;
+    comandas[p.comanda]?.pedidos.remove(p);
+    p.comanda = para.uuid;
+    for (final i in p.itens) {
+      i.comanda = para.uuid;
+    }
+    para.pedidos
+      ..add(p)
+      ..sort((a, b) => a.hora.compareTo(b.hora));
+  }
+
+  /// Depois de todos os eventos: decisões do gerente e pedidos que chegaram atrasados.
+  void _finalizar() {
+    for (final MapEntry(key: id, value: r) in _resolucoes.entries) {
+      final p = pedidos[id];
+      if (p == null) continue;
+      if (r['acao'] == 'descartar') {
+        p.descartado = true;
+      } else if (r['acao'] == 'mover') {
+        final para = comandas[r['para']];
+        if (para != null) _mover(p, para);
+      }
+    }
+    for (final c in comandas.values) {
+      final conhecidos = c.noFechamento;
+      if (c.fechadaEm == null || c.descartada || conhecidos == null) continue;
+      for (final p in c.pedidos) {
+        if (!conhecidos.contains(p.uuid) && !_resolucoes.containsKey(p.uuid)) p.pendente = true;
+      }
+    }
+  }
+
+  /// Pedidos atrasados esperando o gerente.
+  List<PedidoC> get pendencias => pedidos.values.where((p) => p.pendente).toList()..sort((a, b) => a.hora.compareTo(b.hora));
 
   void _esperar(Map<String, List<Map<String, dynamic>>> esperando, String uuid, Map<String, dynamic> ev) =>
       esperando.putIfAbsent(uuid, () => []).add(ev);
@@ -111,10 +160,15 @@ class Estado {
     final d = (ev['dados'] as Map).cast<String, dynamic>();
     // eventos que dependem de uma comanda que ainda não apareceu
     const deComanda = {
-      'comanda_editada', 'pedido_lancado', 'conta_impressa', 'comanda_fechada', 'comanda_reaberta', 'comanda_descartada'
+      'comanda_editada', 'pedido_lancado', 'conta_impressa', 'comanda_fechada', 'comanda_reaberta', 'comanda_descartada',
+      'comanda_juntada',
     };
     if (deComanda.contains(ev['tipo']) && !comandas.containsKey(d['comanda'])) {
       _esperar(esperando, d['comanda'] as String, ev);
+      return;
+    }
+    if (ev['tipo'] == 'comanda_juntada' && !comandas.containsKey(d['para'])) {
+      _esperar(esperando, d['para'] as String, ev);
       return;
     }
     if (ev['tipo'] == 'item_cancelado' && !itens.containsKey(d['item'])) {
@@ -136,7 +190,11 @@ class Estado {
           c.nome = d['nome'] as String;
         }
       case 'pedido_lancado':
-        final c = comandas[d['comanda']]!;
+        var c = comandas[d['comanda']]!;
+        // comanda juntada a outra: o pedido vai para a que ficou
+        for (var n = 0; c.juntadaEm != null && comandas[c.juntadaEm] != null && n < 10; n++) {
+          c = comandas[c.juntadaEm]!;
+        }
         if (pedidos.containsKey(d['pedido'])) return;
         final p = PedidoC(d['pedido'], c.uuid, quem, (ev['device_id'] ?? '') as String, hora, d['offline'] == true);
         for (final it in (d['itens'] as List).cast<Map>()) {
@@ -177,8 +235,12 @@ class Estado {
         final c = comandas[d['comanda']];
         if (c != null) {
           c.fechadaEm = hora;
-          c.fechadaPor = d['forcado'] == true ? '$quem (forçado)' : quem;
+          c.fechadaPor = d['forcado'] == true
+              ? '$quem (forçado${d['autorizado_por'] != null ? ' por ${d['autorizado_por']}' : ''})'
+              : quem;
           c.total = d['total'] as int?;
+          final ps = d['pedidos'];
+          c.noFechamento = ps is List ? {for (final x in ps) x as String} : null;
         }
       case 'comanda_reaberta':
         final c = comandas[d['comanda']];
@@ -186,9 +248,22 @@ class Estado {
           c.fechadaEm = null;
           c.total = null;
           c.contaImpressa = false;
+          c.noFechamento = null;
         }
       case 'comanda_descartada':
         comandas[d['comanda']]?.descartada = true;
+      case 'comanda_juntada':
+        // conflito resolvido juntando: os pedidos desta vão para a outra, e esta some
+        final de = comandas[d['comanda']]!;
+        final para = comandas[d['para']]!;
+        if (de == para) return;
+        for (final p in [...de.pedidos]) {
+          _mover(p, para);
+        }
+        de.descartada = true;
+        de.juntadaEm = para.uuid;
+      case 'pendencia_resolvida':
+        _resolucoes[d['pedido'] as String] = d;
       case 'impresso':
         impressos.add(d['ref'] as String);
       case 'chamado_atendido':
@@ -218,7 +293,8 @@ class Estado {
     final corte = DateTime.now().subtract(Duration(hours: horas)).millisecondsSinceEpoch;
     final out = <(PedidoC, String)>[];
     for (final p in pedidos.values) {
-      if (p.hora < corte || !meu(p)) continue;
+      // pedido atrasado só imprime depois que o gerente decidir
+      if (p.hora < corte || !p.conta || !meu(p)) continue;
       for (final s in p.setores) {
         if (!impressos.contains('${p.uuid}:$s')) out.add((p, s));
       }
@@ -227,7 +303,7 @@ class Estado {
     return out;
   }
 
-  bool pedidoImpresso(PedidoC p) => p.setores.every((s) => impressos.contains('${p.uuid}:$s'));
+  bool pedidoImpresso(PedidoC p) => !p.conta || p.setores.every((s) => impressos.contains('${p.uuid}:$s'));
 
   static List<LinhaConta> linhasConta(ComandaC c) {
     final m = <String, LinhaConta>{};

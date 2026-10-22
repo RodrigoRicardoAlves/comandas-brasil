@@ -15,6 +15,7 @@ from .models import Comanda, Evento, Item, Pedido
 TIPOS = {
     'comanda_aberta', 'comanda_editada', 'pedido_lancado', 'item_cancelado', 'conta_impressa',
     'comanda_fechada', 'comanda_reaberta', 'comanda_descartada', 'impresso', 'chamado_atendido',
+    'comanda_juntada', 'pendencia_resolvida',
 }
 
 
@@ -81,8 +82,17 @@ def _pedido(e, d):
     c = _comanda(e, d.get('comanda'))
     if not c:
         return  # a abertura ainda não chegou; reaplicar_pendentes cuida
-    p, novo = Pedido.objects.get_or_create(bar=e.bar, uuid=txt(d.get('pedido'), 36), defaults=dict(
-        comanda=c, feito_em=e.hora, garcom=e.usuario, offline=bool(d.get('offline'))))
+    for _ in range(10):  # comanda juntada a outra: o pedido vai para a que ficou
+        prox = _comanda(e, c.juntada_para) if c.juntada_para else None
+        if not prox:
+            break
+        c = prox
+    uuid = txt(d.get('pedido'), 36)
+    # chegou depois do fechamento e quem fechou não conhecia: espera o gerente
+    atrasado = c.fechada_em is not None and c.conhecidos is not None and uuid not in c.conhecidos
+    p, novo = Pedido.objects.get_or_create(bar=e.bar, uuid=uuid, defaults=dict(
+        comanda=c, feito_em=e.hora, garcom=e.usuario, offline=bool(d.get('offline')),
+        situacao='pendente' if atrasado else ''))
     if not novo:
         return
     for it in d.get('itens') or []:
@@ -91,6 +101,10 @@ def _pedido(e, d):
             categoria=txt(it.get('categoria'), 40), produto=txt(it.get('produto'), 60),
             variante=txt(it.get('variante'), 40), setor=txt(it.get('setor'), 40), imprime=bool(it.get('imprime')),
             preco_centavos=int(it.get('preco') or 0), qtd=max(1, int(it.get('qtd') or 1)), obs=txt(it.get('obs'), 80))
+    # a decisão do gerente pode ter chegado antes do próprio pedido
+    r = Evento.objects.filter(bar=e.bar, tipo='pendencia_resolvida', dados__pedido=uuid).order_by('-id').first()
+    if r:
+        _resolvida(r, r.dados)
 
 
 def _cancelado(e, d):
@@ -100,15 +114,56 @@ def _cancelado(e, d):
 
 
 def _fechada(e, d):
-    quem = e.usuario + (' (forçado)' if d.get('forcado') else '')
-    Comanda.objects.filter(bar=e.bar, uuid=d.get('comanda')).update(
+    quem = e.usuario
+    if d.get('forcado'):
+        quem += f" (forçado por {d['autorizado_por']})" if d.get('autorizado_por') else ' (forçado)'
+    conhecidos = [str(x) for x in d['pedidos']] if isinstance(d.get('pedidos'), list) else None
+    c = _comanda(e, d.get('comanda'))
+    if not c:
+        return
+    Comanda.objects.filter(pk=c.pk).update(
         fechada_em=e.hora, fechada_por=quem[:60], taxa_servico=Decimal(str(d.get('taxa_servico') or 0)),
-        total_centavos=int(d.get('total') or 0))
+        total_centavos=int(d.get('total') or 0), conhecidos=conhecidos)
+    if conhecidos is not None:
+        # pedidos que já estavam aqui mas quem fechou não via (chegaram por outro caminho)
+        Pedido.objects.filter(comanda=c, situacao='').exclude(uuid__in=conhecidos).exclude(
+            uuid__in=_resolvidos(e.bar)).update(situacao='pendente')
+
+
+def _resolvidos(bar):
+    return [x for x in Evento.objects.filter(bar=bar, tipo='pendencia_resolvida').values_list('dados__pedido', flat=True)]
 
 
 def _reaberta(e, d):
-    Comanda.objects.filter(bar=e.bar, uuid=d.get('comanda')).update(
-        fechada_em=None, fechada_por='', total_centavos=None)
+    c = _comanda(e, d.get('comanda'))
+    if not c:
+        return
+    Comanda.objects.filter(pk=c.pk).update(fechada_em=None, fechada_por='', total_centavos=None, conhecidos=None)
+    Pedido.objects.filter(comanda=c, situacao='pendente').update(situacao='')
+
+
+def _juntada(e, d):
+    """Conflito de número resolvido juntando: pedidos de `comanda` passam para `para`."""
+    de, para = _comanda(e, d.get('comanda')), _comanda(e, d.get('para'))
+    if not de or not para or de.pk == para.pk:
+        return
+    Pedido.objects.filter(comanda=de).update(comanda=para)
+    Item.objects.filter(comanda=de).update(comanda=para)
+    Comanda.objects.filter(pk=de.pk).update(descartada=True, juntada_para=para.uuid)
+
+
+def _resolvida(e, d):
+    """Gerente decidiu sobre um pedido atrasado: mover para outra comanda ou descartar."""
+    p = Pedido.objects.filter(bar=e.bar, uuid=d.get('pedido')).first()
+    if not p:
+        return  # o pedido ainda não chegou; _pedido aplica quando chegar
+    if d.get('acao') == 'descartar':
+        Pedido.objects.filter(pk=p.pk).update(situacao='descartado')
+    elif d.get('acao') == 'mover':
+        para = _comanda(e, d.get('para'))
+        if para:
+            Pedido.objects.filter(pk=p.pk).update(comanda=para, situacao='')
+            Item.objects.filter(pedido=p).update(comanda=para)
 
 
 def _descartada(e, d):
@@ -118,7 +173,7 @@ def _descartada(e, d):
 APLICAR = {
     'comanda_aberta': _aberta, 'comanda_editada': _editada, 'pedido_lancado': _pedido,
     'item_cancelado': _cancelado, 'comanda_fechada': _fechada, 'comanda_reaberta': _reaberta,
-    'comanda_descartada': _descartada,
+    'comanda_descartada': _descartada, 'comanda_juntada': _juntada, 'pendencia_resolvida': _resolvida,
 }
 
 

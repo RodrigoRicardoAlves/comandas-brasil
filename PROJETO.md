@@ -368,3 +368,17 @@ Cada etapa termina com algo testável.
   - Medido: líder morto → outro assume em ~8 s; volta do antigo → troca combinada sem cupom repetido;
     sem VPS, pedidos e conta impressos pelo líder e depois chegaram à VPS sem duplicar.
   - Não testado ainda: aviso de isolamento de clientes (precisa de uma rede de visitantes).
+- 2026-10-22: etapa 5 entregue e testada nos 2 celulares (Wi-Fi do Samsung desligado no meio):
+  - `comanda_fechada` leva a lista `pedidos` que quem fechou conhecia; pedido da comanda fora da lista
+    vira **pendente** (fora da conta, não imprime) até o gerente decidir: `pendencia_resolvida`
+    (`mover` para outra comanda aberta ou `descartar`) ou reabrir a comanda. Tela "Pedidos atrasados"
+    e faixa vermelha na tela inicial. Servidor: `Pedido.situacao` ('', pendente, descartado).
+  - Conflito de número: atalhos "trocar o número", "juntar na outra" (`comanda_juntada`: os pedidos
+    passam para a outra, inclusive os que chegarem depois) e "descartar" (vazia).
+  - Fechar: confere se está ligado ao líder e se algum celular informou registros não entregues
+    (pela rede local ou pela VPS); se houver, mostra quem e só fecha com PIN de gerente ("forçado por").
+  - Limitação conhecida: um celular que saiu da rede sem nada na fila e lançou depois, já desconectado,
+    não é detectado na hora de fechar; o pedido dele vira pendência quando voltar (testado).
+  - Celular que encerra o turno avisa os outros (`saindo`), para não aparecer como "sumiu".
+  - Android não deixa ligar o serviço do líder com o app atrás da tela bloqueada; o app tenta de novo
+    a cada 2 s e liga assim que volta à frente. Resolver de vez na etapa 7 (tirar da otimização de bateria).

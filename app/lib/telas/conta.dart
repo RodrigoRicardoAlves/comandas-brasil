@@ -16,6 +16,34 @@ class _TelaContaState extends State<TelaConta> {
   late bool _servico = App.i.boot!.bar.taxaServico > 0;
   int _pessoas = 1;
 
+  /// Fecha conferindo antes se algum celular ainda pode ter pedido desta comanda guardado.
+  Future<void> _fechar(BuildContext context, ComandaC c) async {
+    final a = App.i;
+    final riscos = await a.riscosFechamento();
+    String? gerente;
+    if (riscos.isNotEmpty) {
+      if (!context.mounted) return;
+      final forcar = await confirmar(
+        context,
+        'Melhor esperar',
+        '${riscos.map((r) => '• $r').join('\n')}\n\n'
+            'Pode existir pedido desta comanda que ainda não chegou. Se fechar mesmo assim, '
+            'o que chegar depois vira "pedido atrasado" para o gerente decidir.',
+        sim: 'Forçar fechamento',
+        perigo: true,
+      );
+      if (!forcar || !context.mounted) return;
+      gerente = a.usuario!.gerente ? a.usuario!.nome : await pedirPinGerente(context, 'Forçar o fechamento da comanda ${c.numero}');
+      if (gerente == null) return;
+    }
+    if (!context.mounted) return;
+    if (await tentar(context, () => a.fecharComanda(c, servico: _servico, forcado: gerente != null, autorizadoPor: gerente),
+            ok: 'Comanda ${c.numero} fechada') &&
+        context.mounted) {
+      Navigator.of(context).popUntil((r) => r.isFirst);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -91,10 +119,7 @@ class _TelaContaState extends State<TelaConta> {
                                   return;
                                 }
                                 if (!context.mounted) return;
-                                if (await tentar(context, () => a.fecharComanda(c, servico: _servico), ok: 'Comanda ${c.numero} fechada') &&
-                                    context.mounted) {
-                                  Navigator.of(context).popUntil((r) => r.isFirst);
-                                }
+                                await _fechar(context, c);
                               }
                             : null,
                       ),

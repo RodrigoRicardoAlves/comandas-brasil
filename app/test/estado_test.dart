@@ -39,6 +39,58 @@ void main() {
     expect(e.comandas['c9']!.nome, 'Zé');
   });
 
+  group('pedido atrasado (chegou depois do fechamento)', () {
+    List<Map<String, dynamic>> base() => [
+          ev('comanda_aberta', {'comanda': 'c1', 'numero': 7, 'nome': 'Ana'}, hora: 1000),
+          ev('pedido_lancado', {'pedido': 'p1', 'comanda': 'c1', 'itens': [item('i1', 'Coca', 600)]}, hora: 2000),
+          // feito offline às 2500, mas quem fechou às 3000 não conhecia
+          ev('pedido_lancado', {'pedido': 'p2', 'comanda': 'c1', 'itens': [item('i2', 'Batata', 3500, setor: 'Cozinha', imprime: true)]},
+              hora: 2500, dev: 'cel2'),
+          ev('comanda_fechada', {'comanda': 'c1', 'total': 600, 'pedidos': ['p1']}, hora: 3000),
+          ev('comanda_aberta', {'comanda': 'c2', 'numero': 8, 'nome': 'Bia'}, hora: 3100),
+        ];
+
+    test('vira pendência, fica fora da conta e não imprime', () {
+      final e = Estado.montar(base());
+      expect(e.pendencias.map((p) => p.uuid), ['p2']);
+      expect(e.comandas['c1']!.subtotal, 600);
+      expect(e.cuponsPendentes(meu: (_) => true, horas: 1000000), isEmpty);
+    });
+
+    test('gerente lança em outra comanda: entra na conta dela e imprime', () {
+      final e = Estado.montar([...base(), ev('pendencia_resolvida', {'pedido': 'p2', 'acao': 'mover', 'para': 'c2'}, hora: 4000)]);
+      expect(e.pendencias, isEmpty);
+      expect(e.comandas['c2']!.subtotal, 3500);
+      expect(e.cuponsPendentes(meu: (_) => true, horas: 1000000).single.$2, 'Cozinha');
+    });
+
+    test('gerente descarta', () {
+      final e = Estado.montar([...base(), ev('pendencia_resolvida', {'pedido': 'p2', 'acao': 'descartar'}, hora: 4000)]);
+      expect(e.pendencias, isEmpty);
+      expect(e.comandas['c1']!.subtotal, 600);
+      expect(e.cuponsPendentes(meu: (_) => true, horas: 1000000), isEmpty);
+    });
+
+    test('reabrir a comanda devolve o pedido para a conta', () {
+      final e = Estado.montar([...base(), ev('comanda_reaberta', {'comanda': 'c1'}, hora: 4000)]);
+      expect(e.pendencias, isEmpty);
+      expect(e.comandas['c1']!.subtotal, 4100);
+    });
+  });
+
+  test('juntar comandas em conflito: pedidos passam para a outra, inclusive os que chegam depois', () {
+    final e = Estado.montar([
+      ev('comanda_aberta', {'comanda': 'a', 'numero': 15, 'nome': 'Ana'}, hora: 1000),
+      ev('comanda_aberta', {'comanda': 'b', 'numero': 15, 'nome': 'Bia'}, hora: 1100, dev: 'cel2'),
+      ev('pedido_lancado', {'pedido': 'p1', 'comanda': 'b', 'itens': [item('i1', 'Coca', 600)]}, hora: 1200, dev: 'cel2'),
+      ev('comanda_juntada', {'comanda': 'b', 'para': 'a'}, hora: 2000),
+      ev('pedido_lancado', {'pedido': 'p2', 'comanda': 'b', 'itens': [item('i2', 'Suco', 800)]}, hora: 2100, dev: 'cel2'),
+    ]);
+    expect(e.abertas.map((c) => c.uuid), ['a']);
+    expect(e.emConflito(e.comandas['a']!), isFalse);
+    expect(e.comandas['a']!.subtotal, 1400);
+  });
+
   test('duas comandas com o mesmo número ficam em conflito até uma fechar', () {
     final evs = [
       ev('comanda_aberta', {'comanda': 'a', 'numero': 15, 'nome': 'Ana'}, dev: 'cel1'),
@@ -87,7 +139,7 @@ void main() {
       ev('impresso', {'ref': 'p1:Cozinha', 'setor': 'Cozinha'}),
       ev('item_cancelado', {'item': 'i2', 'autorizado_por': 'Zé'}),
     ]);
-    expect(e.cuponsPendentes(meu: (_) => true), isEmpty);
+    expect(e.cuponsPendentes(meu: (_) => true, horas: 1000000), isEmpty);
     expect(e.comandas['c1']!.subtotal, 3500);
   });
 }

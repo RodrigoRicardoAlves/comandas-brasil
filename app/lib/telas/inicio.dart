@@ -6,6 +6,7 @@ import '../util.dart';
 import 'comanda.dart';
 import 'comum.dart';
 import 'fechadas.dart';
+import 'pendencias.dart';
 import 'status.dart';
 
 class TelaInicio extends StatefulWidget {
@@ -89,6 +90,17 @@ class _TelaInicioState extends State<TelaInicio> {
           ),
           body: Column(children: [
             const BarraStatus(),
+            if (e.pendencias.isNotEmpty)
+              Material(
+                color: corVermelha.withValues(alpha: .2),
+                child: ListTile(
+                  leading: const Icon(Icons.report, color: corVermelha),
+                  title: Text('${e.pendencias.length} pedido(s) atrasado(s) em comanda já fechada',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
+                  subtitle: const Text('O gerente precisa decidir. Toque para ver.'),
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TelaPendencias())),
+                ),
+              ),
             for (final ch in a.chamados) _Chamado(ch),
             Padding(
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),

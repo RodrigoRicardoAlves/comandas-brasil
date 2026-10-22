@@ -92,3 +92,57 @@ class EventosTest(Base):
         t = self.login('bar-a')
         r = self.post('/eventos', {'eventos': [ev('ev-teste-0009', 'apagar_tudo', {})]}, t).json()
         self.assertEqual(len(r['erros']), 1)
+
+
+class Etapa5Test(Base):
+    """Pedido atrasado, decisão do gerente e junção de comandas em conflito."""
+
+    def enviar(self, t, *evs):
+        r = self.post('/eventos', {'eventos': list(evs)}, t)
+        self.assertEqual(r.json()['erros'], [])
+
+    def setUp(self):
+        super().setUp()
+        self.t = self.login('bar-a')
+        it = {'item': 'i-1', 'produto': 'Coca', 'preco': 600, 'qtd': 1}
+        self.enviar(self.t,
+                    ev('evento5-001', 'comanda_aberta', {'comanda': 'c1', 'numero': 7, 'nome': 'Ana'}),
+                    ev('evento5-002', 'pedido_lancado', {'pedido': 'p1', 'comanda': 'c1', 'itens': [it]}),
+                    ev('evento5-003', 'comanda_fechada', {'comanda': 'c1', 'total': 600, 'pedidos': ['p1']}),
+                    ev('evento5-004', 'comanda_aberta', {'comanda': 'c2', 'numero': 8, 'nome': 'Bia'}))
+        self.atrasado = ev('evento5-005', 'pedido_lancado', {'pedido': 'p2', 'comanda': 'c1', 'itens': [
+            {'item': 'i-2', 'produto': 'Batata', 'preco': 3500, 'qtd': 1}]})
+
+    def test_pedido_atrasado_fica_pendente(self):
+        from comandas.models import Pedido
+        self.enviar(self.t, self.atrasado)
+        self.assertEqual(Pedido.objects.get(uuid='p2').situacao, 'pendente')
+        self.assertEqual(Pedido.objects.get(uuid='p1').situacao, '')
+
+    def test_gerente_move_para_outra(self):
+        from comandas.models import Item, Pedido
+        self.enviar(self.t, self.atrasado, ev('evento5-006', 'pendencia_resolvida', {'pedido': 'p2', 'acao': 'mover', 'para': 'c2'}))
+        p = Pedido.objects.get(uuid='p2')
+        self.assertEqual((p.comanda.uuid, p.situacao), ('c2', ''))
+        self.assertEqual(Item.objects.get(uuid='i-2').comanda.uuid, 'c2')
+
+    def test_decisao_chega_antes_do_pedido(self):
+        from comandas.models import Pedido
+        self.enviar(self.t, ev('evento5-006', 'pendencia_resolvida', {'pedido': 'p2', 'acao': 'descartar'}), self.atrasado)
+        self.assertEqual(Pedido.objects.get(uuid='p2').situacao, 'descartado')
+
+    def test_reabrir_devolve_pedido(self):
+        from comandas.models import Pedido
+        self.enviar(self.t, self.atrasado, ev('evento5-006', 'comanda_reaberta', {'comanda': 'c1'}))
+        self.assertEqual(Pedido.objects.get(uuid='p2').situacao, '')
+
+    def test_juntar_comandas(self):
+        from comandas.models import Pedido
+        self.enviar(self.t,
+                    ev('evento5-010', 'comanda_aberta', {'comanda': 'x1', 'numero': 15, 'nome': 'A'}),
+                    ev('evento5-011', 'comanda_aberta', {'comanda': 'x2', 'numero': 15, 'nome': 'B'}),
+                    ev('evento5-012', 'pedido_lancado', {'pedido': 'px', 'comanda': 'x2', 'itens': []}),
+                    ev('evento5-013', 'comanda_juntada', {'comanda': 'x2', 'para': 'x1'}),
+                    ev('evento5-014', 'pedido_lancado', {'pedido': 'py', 'comanda': 'x2', 'itens': []}))
+        self.assertTrue(Comanda.objects.get(uuid='x2').descartada)
+        self.assertEqual(set(Pedido.objects.filter(comanda__uuid='x1').values_list('uuid', flat=True)), {'px', 'py'})

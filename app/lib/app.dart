@@ -278,8 +278,8 @@ class App extends ChangeNotifier {
     await _registrar('pedido_lancado', {
       'pedido': _uuid.v4(),
       'comanda': c.uuid,
-      // "feito sem conexão": o líder (quem imprime) não estava ao alcance
-      'offline': !rede.liderAlcancavel,
+      // "feito sem conexão": o líder (quem imprime) não estava ao alcance, ou o celular está sem Wi-Fi
+      'offline': !rede.liderAlcancavel || (rede.meuIp == null && !online),
       'itens': [
         for (final it in carrinho)
           {
@@ -323,7 +323,38 @@ class App extends ChangeNotifier {
     await _registrar('conta_impressa', {'comanda': c.uuid, 'servico': servico, 'pessoas': pessoas});
   }
 
-  Future<void> fecharComanda(ComandaC c, {required bool servico, bool forcado = false}) async {
+  /// Motivos para NÃO fechar agora (pode haver pedido desta comanda ainda não chegado).
+  /// Vazio = pode fechar. O gerente pode forçar mesmo assim.
+  Future<List<String>> riscosFechamento() async {
+    final r = <String>[];
+    if (rede.ativa && !rede.liderAlcancavel) {
+      r.add('Este celular está sem contato com o celular líder. Conecte à Wi-Fi do bar.');
+    }
+    // quem está conectado normalmente entrega a fila em segundos: espera um pouco antes de reclamar
+    for (var i = 0; i < 4; i++) {
+      if (rede.vivos().every((p) => p.pendentes == 0)) break;
+      await Future.delayed(const Duration(milliseconds: 1500));
+    }
+    for (final p in rede.vivos().where((p) => p.pendentes > 0)) {
+      r.add('${rede.nomeDe(p.id)} ainda tem ${p.pendentes} registro(s) para entregar.');
+    }
+    final agora = agoraMs();
+    for (final p in rede.pares.values) {
+      if (!p.vivo(agora) && p.pendentes > 0) {
+        r.add('${rede.nomeDe(p.id)} saiu da rede às ${hhmm(p.vistoMs)} com ${p.pendentes} registro(s) guardado(s).');
+      }
+    }
+    final naRede = {for (final p in rede.vivos()) p.id};
+    for (final ap in aparelhos) {
+      final n = (ap['pendentes'] ?? 0) as int;
+      if (ap['device_id'] != deviceId && !naRede.contains(ap['device_id']) && n > 0) {
+        r.add('${ap['usuario']} (${ap['modelo']}) tem $n registro(s) que não chegaram a este celular.');
+      }
+    }
+    return r;
+  }
+
+  Future<void> fecharComanda(ComandaC c, {required bool servico, bool forcado = false, String? autorizadoPor}) async {
     _exigirLogin();
     final atual = estado.comandas[c.uuid];
     if (atual == null || !atual.aberta) throw ErroApp('Comanda já estava fechada');
@@ -332,14 +363,39 @@ class App extends ChangeNotifier {
       'taxa_servico': servico ? boot!.bar.taxaServico : 0,
       'total': totalComServico(atual, servico),
       'forcado': forcado,
+      'autorizado_por': ?autorizadoPor,
+      // pedidos que este celular conhecia: um pedido desta comanda que chegar depois vira pendência
+      'pedidos': [for (final p in atual.pedidos) p.uuid],
     });
   }
 
-  Future<void> reabrirComanda(ComandaC c) async {
+  /// Conflito de número: passa todos os pedidos desta comanda para a outra e esta some.
+  Future<void> juntarComanda(ComandaC de, ComandaC para) async {
+    _exigirLogin();
+    if (!de.aberta || !para.aberta) throw ErroApp('As duas comandas precisam estar abertas');
+    await _registrar('comanda_juntada', {'comanda': de.uuid, 'para': para.uuid});
+  }
+
+  /// Gerente decide o que fazer com um pedido que chegou depois do fechamento.
+  /// acao: 'mover' (para outra comanda aberta) ou 'descartar'. Para reabrir, use reabrirComanda.
+  Future<void> resolverPendencia(PedidoC p, String acao, {ComandaC? para, required String gerente}) async {
+    _exigirLogin();
+    if (acao == 'mover' && (para == null || !para.aberta)) throw ErroApp('Escolha uma comanda aberta');
+    await _registrar('pendencia_resolvida', {
+      'pedido': p.uuid,
+      'acao': acao,
+      'para': ?para?.uuid,
+      'autorizado_por': gerente,
+    });
+    unawaited(imprimirPendentes());
+  }
+
+  Future<void> reabrirComanda(ComandaC c, {String? autorizadoPor}) async {
     _exigirLogin();
     final outra = estado.abertaComNumero(c.numero);
     if (outra != null) throw ErroApp('Já existe outra comanda ${c.numero} aberta. Feche-a ou troque o número antes.');
-    await _registrar('comanda_reaberta', {'comanda': c.uuid});
+    await _registrar('comanda_reaberta', {'comanda': c.uuid, 'autorizado_por': ?autorizadoPor});
+    unawaited(imprimirPendentes()); // pedidos atrasados desta comanda voltam a valer
   }
 
   Future<void> descartarComanda(ComandaC c) async {

@@ -57,17 +57,7 @@ class TelaComanda extends StatelessWidget {
           ),
           body: Column(children: [
             const BarraStatus(),
-            if (conflito)
-              Container(
-                width: double.infinity,
-                color: corVermelha.withValues(alpha: .2),
-                padding: const EdgeInsets.all(12),
-                child: const Text(
-                  '⚠ Há duas comandas com este número (abertas em celulares que estavam sem se comunicar). '
-                  'Novos pedidos ficam bloqueados até uma delas ser fechada. Dica: troque o número de uma delas no lápis ✏️.',
-                  style: TextStyle(color: corVermelha),
-                ),
-              ),
+            if (conflito) _Conflito(c, a.estado.abertaComNumero(c.numero, exceto: c.uuid)!),
             if (!c.aberta)
               Container(
                 width: double.infinity,
@@ -156,6 +146,56 @@ class TelaComanda extends StatelessWidget {
   }
 }
 
+/// Duas comandas abertas com o mesmo número: mostra as duas e os atalhos para resolver.
+class _Conflito extends StatelessWidget {
+  final ComandaC c, outra;
+  const _Conflito(this.c, this.outra);
+
+  @override
+  Widget build(BuildContext context) {
+    final a = App.i;
+    return Container(
+      width: double.infinity,
+      color: corVermelha.withValues(alpha: .2),
+      padding: const EdgeInsets.all(12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(
+          '⚠ Há duas comandas ${c.numero} abertas: esta (${c.nome}, ${reais(c.subtotal)}) e a de '
+          '${outra.nome} (${reais(outra.subtotal)}, aberta por ${outra.abertaPor}). '
+          'Nenhuma aceita pedido até resolver. Fechar uma também resolve.',
+          style: const TextStyle(color: corVermelha),
+        ),
+        const SizedBox(height: 8),
+        Wrap(spacing: 8, runSpacing: 8, children: [
+          FilledButton.tonal(onPressed: () => dialogoComanda(context, editar: c), child: const Text('Trocar o número desta')),
+          OutlinedButton(
+            onPressed: () async {
+              if (await confirmar(context, 'Juntar comandas?',
+                      'Os pedidos desta comanda (${c.nome}) passam para a de ${outra.nome}, e esta deixa de existir.',
+                      sim: 'Juntar') &&
+                  context.mounted) {
+                if (await tentar(context, () => a.juntarComanda(c, outra), ok: 'Comandas juntadas') && context.mounted) {
+                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => TelaComanda(outra.uuid)));
+                }
+              }
+            },
+            child: Text('Juntar na de ${outra.nome}'),
+          ),
+          if (c.itensAtivos.isEmpty)
+            TextButton(
+              onPressed: () async {
+                if (await tentar(context, () => a.descartarComanda(c), ok: 'Comanda descartada') && context.mounted) {
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Descartar esta (vazia)', style: TextStyle(color: corVermelha)),
+            ),
+        ]),
+      ]),
+    );
+  }
+}
+
 class _CabecalhoPedido extends StatelessWidget {
   final PedidoC p;
   const _CabecalhoPedido(this.p);
@@ -171,11 +211,12 @@ class _CabecalhoPedido extends StatelessWidget {
       child: Row(children: [
         Expanded(
           child: Text(
-            '${hhmm(p.hora)} · ${p.garcom}${p.offline ? ' · sem conexão' : ''}',
-            style: const TextStyle(color: Colors.white60),
+            '${hhmm(p.hora)} · ${p.garcom}${p.offline ? ' · sem conexão' : ''}'
+            '${p.pendente ? ' · ATRASADO (fora da conta)' : ''}${p.descartado ? ' · DESCARTADO' : ''}',
+            style: TextStyle(color: p.conta ? Colors.white60 : corVermelha),
           ),
         ),
-        if (setores.isNotEmpty) ...[
+        if (setores.isNotEmpty && p.conta) ...[
           Icon(impresso ? Icons.print : Icons.print_disabled, size: 18, color: impresso ? corVerde : corAmbar),
           const SizedBox(width: 4),
           Text(setores.join(', '), style: TextStyle(color: impresso ? corVerde : corAmbar, fontSize: 13)),
