@@ -11,7 +11,7 @@ void aviso(BuildContext context, String msg, {bool erro = false, int segundos = 
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(
-      content: Text(msg, style: const TextStyle(fontSize: 16)),
+      content: Text(msg, style: const TextStyle(fontSize: 16, color: Colors.white)),
       backgroundColor: erro ? const Color(0xFF8B1E24) : const Color(0xFF2E3A2E),
       duration: Duration(seconds: segundos),
       behavior: SnackBarBehavior.floating,

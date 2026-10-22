@@ -40,5 +40,11 @@ class Bar(models.Model):
     def __str__(self):
         return self.nome
 
+    def save(self, *a, **kw):
+        # mudou configuração (impressora, taxa...): os celulares baixam de novo
+        if self.pk:
+            self.versao_cardapio += 1
+        super().save(*a, **kw)
+
     def subir_versao_cardapio(self):
         Bar.objects.filter(pk=self.pk).update(versao_cardapio=models.F('versao_cardapio') + 1)

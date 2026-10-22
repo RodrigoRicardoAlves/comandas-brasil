@@ -117,7 +117,7 @@ def atender(con, end):
     agora = datetime.now()
     borda = '+' + '-' * (COLS + 2) + '+'
     saida = [f'\n🖨  Cupom de {end[0]} às {agora:%H:%M:%S} ({len(dados)} bytes, {cortes} corte(s))', borda]
-    saida += [f'| {ln[:COLS].ljust(COLS)} |' for ln in linhas]
+    saida += [f'| {ln.ljust(COLS)} |' for ln in linhas]
     saida.append(borda)
     print('\n'.join(saida), flush=True)
     os.makedirs(PASTA, exist_ok=True)

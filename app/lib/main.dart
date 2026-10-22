@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
@@ -11,6 +12,7 @@ import 'telas/pin.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pt_BR');
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   await App.i.iniciar();
   WakelockPlus.enable().catchError((_) {}); // tela não apaga durante o atendimento
   runApp(const ComandasApp());

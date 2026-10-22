@@ -339,3 +339,9 @@ Cada etapa termina com algo testável.
 ## 14. Registro de decisões
 
 - 2026-10-22: documento inicial combinado com o dono do projeto.
+- 2026-10-22: etapas 1 e 3 entregues (servidor Django + app com 1 celular). Ajustes:
+  configurações do bar ficam no próprio modelo `Bar` (sem `ConfigBar` separado); salvar o bar
+  sobe a versão e os celulares baixam de novo. Em dev o servidor roda na porta 8100 (a 8000 é
+  de outro projeto). Enquanto não há rede local (etapa 4), os celulares se sincronizam pela VPS
+  e cada um imprime os próprios pedidos; chamados do QR são impressos pelo aparelho de menor id.
+  App travado em retrato.
