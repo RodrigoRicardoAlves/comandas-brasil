@@ -82,17 +82,45 @@ class Estado {
   final Set<String> impressos = {}; // "pedido:setor"
   final Set<String> chamadosAtendidos = {};
 
+  /// Os eventos vêm de vários celulares e podem chegar fora de ordem: são aplicados pela hora
+  /// em que aconteceram, e um evento que cita uma comanda/item ainda desconhecido espera por ele.
   static Estado montar(List<Map<String, dynamic>> eventos) {
     final e = Estado();
-    final esperando = <String, List<Map<String, dynamic>>>{}; // pedidos que chegaram antes da comanda
-    for (final ev in eventos) {
+    final ordem = [for (var i = 0; i < eventos.length; i++) (i, eventos[i])]
+      ..sort((a, b) {
+        final c = ((a.$2['hora'] ?? 0) as int).compareTo((b.$2['hora'] ?? 0) as int);
+        return c != 0 ? c : a.$1.compareTo(b.$1);
+      });
+    final esperando = <String, List<Map<String, dynamic>>>{}; // uuid que falta -> eventos
+    for (final (_, ev) in ordem) {
       e._aplicar(ev, esperando);
     }
     return e;
   }
 
+  void _esperar(Map<String, List<Map<String, dynamic>>> esperando, String uuid, Map<String, dynamic> ev) =>
+      esperando.putIfAbsent(uuid, () => []).add(ev);
+
+  void _liberar(Map<String, List<Map<String, dynamic>>> esperando, String uuid) {
+    for (final ev in esperando.remove(uuid) ?? const <Map<String, dynamic>>[]) {
+      _aplicar(ev, esperando);
+    }
+  }
+
   void _aplicar(Map<String, dynamic> ev, Map<String, List<Map<String, dynamic>>> esperando) {
     final d = (ev['dados'] as Map).cast<String, dynamic>();
+    // eventos que dependem de uma comanda que ainda não apareceu
+    const deComanda = {
+      'comanda_editada', 'pedido_lancado', 'conta_impressa', 'comanda_fechada', 'comanda_reaberta', 'comanda_descartada'
+    };
+    if (deComanda.contains(ev['tipo']) && !comandas.containsKey(d['comanda'])) {
+      _esperar(esperando, d['comanda'] as String, ev);
+      return;
+    }
+    if (ev['tipo'] == 'item_cancelado' && !itens.containsKey(d['item'])) {
+      _esperar(esperando, d['item'] as String, ev);
+      return;
+    }
     final quem = (ev['usuario'] ?? '') as String;
     final hora = (ev['hora'] ?? 0) as int;
     switch (ev['tipo']) {
@@ -100,9 +128,7 @@ class Estado {
         final uuid = d['comanda'] as String;
         comandas.putIfAbsent(
             uuid, () => ComandaC(uuid, d['numero'] as int, d['nome'] as String, hora, quem, (ev['device_id'] ?? '') as String));
-        for (final p in esperando.remove(uuid) ?? const []) {
-          _aplicar(p, esperando);
-        }
+        _liberar(esperando, uuid);
       case 'comanda_editada':
         final c = comandas[d['comanda']];
         if (c != null) {
@@ -110,11 +136,7 @@ class Estado {
           c.nome = d['nome'] as String;
         }
       case 'pedido_lancado':
-        final c = comandas[d['comanda']];
-        if (c == null) {
-          esperando.putIfAbsent(d['comanda'] as String, () => []).add(ev);
-          return;
-        }
+        final c = comandas[d['comanda']]!;
         if (pedidos.containsKey(d['pedido'])) return;
         final p = PedidoC(d['pedido'], c.uuid, quem, (ev['device_id'] ?? '') as String, hora, d['offline'] == true);
         for (final it in (d['itens'] as List).cast<Map>()) {
@@ -140,6 +162,9 @@ class Estado {
         }
         pedidos[p.uuid] = p;
         c.pedidos.add(p);
+        for (final i in p.itens) {
+          _liberar(esperando, i.uuid);
+        }
       case 'item_cancelado':
         final i = itens[d['item']];
         if (i != null) {

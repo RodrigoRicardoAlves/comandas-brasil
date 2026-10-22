@@ -345,3 +345,26 @@ Cada etapa termina com algo testável.
   de outro projeto). Enquanto não há rede local (etapa 4), os celulares se sincronizam pela VPS
   e cada um imprime os próprios pedidos; chamados do QR são impressos pelo aparelho de menor id.
   App travado em retrato.
+- 2026-10-22: etapa 4 (rede local) entregue e testada com 2 celulares (Xiaomi Android 14 + Samsung
+  A13 Android 13). Detalhes da implementação:
+  - Cada celular abre HTTP na porta 8787 (`/oi`, `/eventos/enviar`, `/eventos/baixar`, `/imprimir`),
+    pedidos e respostas assinados com HMAC-SHA256 da `lan_key` (cabeçalho `x-assinatura`, validade
+    10 min). Descoberta: broadcast UDP na 8788 (assinado), mDNS `_comandas._tcp` (NSD nativo) e a
+    lista da VPS (`/presenca` agora recebe `porta` e `lider`).
+  - Batida a cada 2 s; par sem resposta por 9 s = sumiu. Ao abrir o app espera 6 s antes de se
+    declarar líder. O mandato não é guardado entre aberturas do app (quem volta obedece o líder atual).
+  - Seguidor manda ao líder tudo que ele ainda não tem (cursor por par; reenvia tudo ao trocar de
+    líder, sem perigo porque o UUID não duplica) e baixa do líder o resto. Coluna `no_lider` marca o
+    que já está seguro no líder; "na fila" = nem na VPS nem no líder. O líder sobe tudo para a VPS;
+    cada celular continua subindo os próprios eventos quando tem internet.
+  - Estado montado pela hora dos eventos; evento que cita comanda/item ainda desconhecido espera.
+  - Só o líder imprime; conta, cancelamento, teste e chamados dos outros vão ao líder por `/imprimir`
+    (se o líder não responde, o celular imprime direto). Reimpressão automática sem desistir (espera
+    até 1 min entre tentativas).
+  - Serviço em primeiro plano tipo `connectedDevice` (a impressora de rede), com trava de CPU e de
+    Wi-Fi, só no líder com 2+ celulares. O motor do Flutter fica em cache: apertar "voltar" não mata
+    o app. Testado: líder com tela apagada continua imprimindo os pedidos do outro.
+  - Na tomada com bateria cheia conta como "carregando".
+  - Medido: líder morto → outro assume em ~8 s; volta do antigo → troca combinada sem cupom repetido;
+    sem VPS, pedidos e conta impressos pelo líder e depois chegaram à VPS sem duplicar.
+  - Não testado ainda: aviso de isolamento de clientes (precisa de uma rede de visitantes).

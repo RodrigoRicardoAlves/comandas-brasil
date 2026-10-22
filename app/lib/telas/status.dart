@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app.dart';
+import '../sistema.dart';
 import 'comum.dart';
 
 /// Situação do celular, da conexão e da impressora.
@@ -82,7 +83,50 @@ class _TelaStatusState extends State<TelaStatus> {
               ),
             const _Titulo('Setores de impressão'),
             for (final s in a.boot!.setores) linha(s.nome, s.impressora.isEmpty ? 'impressora do bar' : s.impressora),
-            const _Titulo('Celulares conectados'),
+            const _Titulo('Rede local (Wi-Fi do bar)'),
+            if (!a.rede.ativa) const ListTile(dense: true, title: Text('Desligada (entre com o PIN)')),
+            if (a.rede.ativa) ...[
+              linha('Líder', a.rede.nomeDe(a.rede.eleicao.lider),
+                  cor: a.rede.souLider ? corAmbar : (a.rede.liderAlcancavel ? corVerde : corVermelha)),
+              linha('Mandato', '${a.rede.eleicao.termo}'),
+              linha('Nota deste celular', '${a.rede.nota}${a.rede.elegivel ? '' : ' (bateria baixa: não lidera)'}'),
+              linha('IP deste celular', a.rede.meuIp ?? '?'),
+              if (a.rede.servicoLigado) linha('Serviço do líder', 'ligado (notificação fixa)', cor: corAmbar),
+              if (a.rede.sistema['economia'] == true) linha('Economia de bateria', 'ligada (−30 na nota)', cor: corAmbar),
+              if (a.rede.erroServidor != null) ListTile(dense: true, title: Text(a.rede.erroServidor!, style: const TextStyle(color: corVermelha))),
+              if (a.rede.isolamento)
+                const ListTile(
+                  dense: true,
+                  leading: Icon(Icons.wifi_off, color: corVermelha),
+                  title: Text('Esta rede não deixa os celulares conversarem (isolamento de clientes). Use a rede principal do bar.'),
+                ),
+              for (final p in a.rede.pares.values)
+                ListTile(
+                  dense: true,
+                  leading: Icon(p.id == a.rede.eleicao.lider ? Icons.print : Icons.phone_android,
+                      color: p.vivo(DateTime.now().millisecondsSinceEpoch) ? corVerde : corVermelha),
+                  title: Text('${p.usuario.isEmpty ? '?' : p.usuario} · ${p.modelo.isEmpty ? p.id.substring(0, 6) : p.modelo}'),
+                  subtitle: Text('${p.ip}:${p.porta} · nota ${p.nota} · mandato ${p.termo} · via ${p.origens.join(', ')}'
+                      '${p.falhas > 0 ? ' · ${p.falhas} falha(s)' : ''}'),
+                  trailing: Text('${p.bateria ?? '?'}%${p.carregando ? ' ⚡' : ''}'),
+                ),
+              if (a.rede.pares.isEmpty) const ListTile(dense: true, title: Text('Nenhum outro celular encontrado')),
+              if (a.rede.sistema['otimizado'] == true)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: OutlinedButton.icon(
+                    icon: const Icon(Icons.battery_alert),
+                    onPressed: Sistema.abrirBateria,
+                    label: const Text('Tirar o app da economia de bateria'),
+                  ),
+                ),
+              for (final l in a.rede.registro.take(6))
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 1),
+                  child: Text(l, style: const TextStyle(fontSize: 12, color: Colors.white54)),
+                ),
+            ],
+            const _Titulo('Celulares no servidor (internet)'),
             if (a.aparelhos.isEmpty) const ListTile(dense: true, title: Text('—')),
             for (final ap in a.aparelhos)
               ListTile(

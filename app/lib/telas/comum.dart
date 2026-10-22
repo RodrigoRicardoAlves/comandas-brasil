@@ -139,8 +139,20 @@ class BarraStatus extends StatelessWidget {
       builder: (context, _) {
         final a = App.i;
         final avisos = <(Color, IconData, String)>[];
+        final r = a.rede;
+        final temRede = r.ativa && r.vivos().isNotEmpty;
+        if (r.isolamento) {
+          avisos.add((corVermelha, Icons.wifi_off,
+              'Esta rede não deixa os celulares conversarem (isolamento de clientes). Use a rede principal do bar.'));
+        } else if (r.ativa && r.eleicao.lider == null) {
+          avisos.add((corAmbar, Icons.wifi_find, 'Procurando o celular líder...'));
+        } else if (temRede && !r.liderAlcancavel) {
+          avisos.add((corVermelha, Icons.wifi_off, 'Sem contato com o celular líder'));
+        }
         if (!a.temSessaoServidor) {
           avisos.add((corAmbar, Icons.link_off, 'Sessão encerrada no servidor: entre de novo com internet'));
+        } else if (!a.online && temRede && r.liderAlcancavel) {
+          avisos.add((corAmbar, Icons.cloud_off, 'Sem internet · rede local funcionando'));
         } else if (!a.online) {
           avisos.add((corVermelha, Icons.cloud_off, 'Sem conexão${a.naFila > 0 ? ' · ${a.naFila} na fila' : ''}'));
         } else if (a.naFila > 0) {

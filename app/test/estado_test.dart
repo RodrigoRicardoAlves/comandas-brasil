@@ -25,6 +25,20 @@ void main() {
     expect(e.comandas['c1']!.subtotal, 4400);
   });
 
+  test('cancelamento que chega antes do pedido (outro celular) espera o item aparecer', () {
+    final e = Estado.montar([
+      ev('comanda_aberta', {'comanda': 'c1', 'numero': 3, 'nome': 'Ana'}, hora: 1000),
+      ev('item_cancelado', {'item': 'i1'}, hora: 3000),
+      ev('comanda_editada', {'comanda': 'c9', 'numero': 4, 'nome': 'Zé'}, hora: 1500),
+      ev('pedido_lancado', {'pedido': 'p1', 'comanda': 'c1', 'itens': [item('i1', 'Batata', 2200), item('i2', 'Coca', 600)]},
+          hora: 2000),
+      ev('comanda_aberta', {'comanda': 'c9', 'numero': 9, 'nome': 'Teo'}, hora: 1200),
+    ]);
+    expect(e.comandas['c1']!.subtotal, 600);
+    expect(e.comandas['c9']!.numero, 4);
+    expect(e.comandas['c9']!.nome, 'Zé');
+  });
+
   test('duas comandas com o mesmo número ficam em conflito até uma fechar', () {
     final evs = [
       ev('comanda_aberta', {'comanda': 'a', 'numero': 15, 'nome': 'Ana'}, dev: 'cel1'),

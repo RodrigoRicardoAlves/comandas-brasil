@@ -16,6 +16,8 @@ import 'dados/estado.dart';
 import 'dados/modelos.dart';
 import 'impressao/cupons.dart';
 import 'impressao/impressora.dart';
+import 'rede/rede_local.dart';
+import 'sistema.dart';
 import 'util.dart';
 
 const servidorPadrao = String.fromEnvironment('SERVIDOR', defaultValue: 'https://bar.rodrigoricardo.eng.br');
@@ -45,6 +47,7 @@ class App extends ChangeNotifier {
   App._();
 
   final banco = Banco();
+  late final rede = RedeLocal(this);
   final _bateria = Battery();
   late Api api;
 
@@ -101,14 +104,25 @@ class App extends ChangeNotifier {
     final u = await banco.lerJson('usuario');
     if (u != null && boot != null) usuario = Usuario.json(u);
     await _recalcular();
+    Sistema.iniciar();
+    if (logado) unawaited(rede.iniciar());
     _timer = Timer.periodic(const Duration(seconds: 4), (_) => ciclo());
     unawaited(ciclo());
   }
 
   Future<void> _recalcular() async {
     estado = Estado.montar(await banco.eventos());
-    naFila = await banco.contarNaoEnviados();
+    naFila = await banco.contarPendentes();
     notifyListeners();
+  }
+
+  /// Para a rede local avisar as telas.
+  void avisar() => notifyListeners();
+
+  /// Chegaram eventos de outro celular (rede local).
+  Future<void> aoChegarEventos() async {
+    await _recalcular();
+    unawaited(imprimirPendentes());
   }
 
   // ------------------------------------------------------------------ login
@@ -141,6 +155,8 @@ class App extends ChangeNotifier {
     if (mudouBar) _ultimoSeq = 0;
     online = true;
     await _recalcular();
+    if (mudouBar) await rede.parar();
+    unawaited(rede.iniciar());
     unawaited(ciclo());
   }
 
@@ -153,6 +169,7 @@ class App extends ChangeNotifier {
     usuario = u;
     await banco.gravarJson('usuario', u.json());
     notifyListeners();
+    unawaited(rede.iniciar());
     // avisa o servidor quem está com o celular (se houver internet)
     {
       unawaited(api.post('/login', {
@@ -185,9 +202,17 @@ class App extends ChangeNotifier {
 
   /// Ir embora: só com tudo enviado.
   Future<void> encerrarTurno() async {
+    await rede.sincronizar();
     await ciclo();
-    final n = await banco.contarNaoEnviados();
-    if (n > 0) throw ErroApp('Ainda há $n registro(s) que não chegaram ao servidor. Conecte à internet e tente de novo.');
+    final n = await banco.contarPendentes();
+    if (n > 0) {
+      throw ErroApp('Ainda há $n registro(s) só neste celular (não chegaram ao líder nem ao servidor). '
+          'Conecte à Wi-Fi do bar ou à internet e tente de novo.');
+    }
+    if (!await rede.passarAntesDeSair()) {
+      throw ErroApp('Este celular é o líder e não conseguiu passar a vez para outro. Tente de novo.');
+    }
+    await rede.parar();
     try {
       await api.post('/logout');
     } catch (_) {}
@@ -209,6 +234,7 @@ class App extends ChangeNotifier {
     };
     await banco.inserirEvento(ev);
     await _recalcular();
+    rede.sincronizarJa();
     unawaited(ciclo());
     return ev;
   }
@@ -252,7 +278,8 @@ class App extends ChangeNotifier {
     await _registrar('pedido_lancado', {
       'pedido': _uuid.v4(),
       'comanda': c.uuid,
-      'offline': !online,
+      // "feito sem conexão": o líder (quem imprime) não estava ao alcance
+      'offline': !rede.liderAlcancavel,
       'itens': [
         for (final it in carrinho)
           {
@@ -279,7 +306,7 @@ class App extends ChangeNotifier {
     final foiImpresso = estado.impressos.contains('${item.pedido}:${item.setor}');
     if (c != null && item.imprime && foiImpresso) {
       try {
-        await Impressora.enviar(_alvo(item.setor), cupomCancelamento(boot!.bar, c, item, usuario!.nome));
+        await _imprimir(_alvo(item.setor), cupomCancelamento(boot!.bar, c, item, usuario!.nome));
       } catch (e) {
         _erroImpressao(e);
       }
@@ -291,7 +318,7 @@ class App extends ChangeNotifier {
 
   Future<void> imprimirConta(ComandaC c, {required bool servico, required int pessoas}) async {
     _exigirLogin();
-    await Impressora.enviar(_alvo(''), cupomConta(boot!.bar, c, servico: servico, pessoas: pessoas));
+    await _imprimir(_alvo(''), cupomConta(boot!.bar, c, servico: servico, pessoas: pessoas));
     erroImpressora = null;
     await _registrar('conta_impressa', {'comanda': c.uuid, 'servico': servico, 'pessoas': pessoas});
   }
@@ -333,11 +360,15 @@ class App extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Quem imprime os pedidos. Por enquanto (sem rede local) cada celular imprime os seus.
-  /// Na etapa da rede local, o líder passa a imprimir os de todos.
-  bool _imprimoEste(PedidoC p) => p.deviceId == deviceId;
+  /// Só o líder imprime os pedidos (de todos os celulares). Enquanto a eleição não termina
+  /// (primeiros segundos), ninguém imprime.
+  bool _imprimoEste(PedidoC p) => rede.souLider;
+
+  /// Envia para a impressora: direto se for o líder, senão pede ao líder.
+  Future<void> _imprimir(String alvo, List<int> bytes) => rede.imprimir(alvo, bytes);
 
   bool _imprimindo = false;
+  bool get imprimindo => _imprimindo;
 
   Future<void> imprimirPendentes({bool forcar = false}) async {
     if (_imprimindo || boot == null) return;
@@ -346,11 +377,12 @@ class App extends ChangeNotifier {
       for (final (p, setor) in estado.cuponsPendentes(meu: _imprimoEste)) {
         final ref = '${p.uuid}:$setor';
         final (n, ultima) = _tentativasImpressao[ref] ?? (0, 0);
-        if (!forcar && (n >= 3 || agoraMs() - ultima < 15000 * n)) continue;
+        // nova tentativa com espera crescente (até 1 min); nunca desiste
+        if (!forcar && agoraMs() - ultima < (15000 * n).clamp(0, 60000)) continue;
         final c = estado.comandas[p.comanda];
         if (c == null) continue;
         try {
-          await Impressora.enviar(_alvo(setor), cupomPedido(boot!.bar, c, p, setor));
+          await _imprimir(_alvo(setor), cupomPedido(boot!.bar, c, p, setor));
           _tentativasImpressao.remove(ref);
           erroImpressora = null;
           await _registrar('impresso', {'ref': ref, 'setor': setor});
@@ -370,7 +402,7 @@ class App extends ChangeNotifier {
   Future<void> reimprimirPedido(PedidoC p) async {
     final c = estado.comandas[p.comanda]!;
     for (final s in p.setores) {
-      await Impressora.enviar(_alvo(s), cupomPedido(boot!.bar, c, p, s, reimpressao: estado.impressos.contains('${p.uuid}:$s')));
+      await _imprimir(_alvo(s), cupomPedido(boot!.bar, c, p, s, reimpressao: estado.impressos.contains('${p.uuid}:$s')));
       if (!estado.impressos.contains('${p.uuid}:$s')) await _registrar('impresso', {'ref': '${p.uuid}:$s', 'setor': s});
     }
     erroImpressora = null;
@@ -379,7 +411,7 @@ class App extends ChangeNotifier {
 
   Future<void> imprimirTeste([String? alvo]) async {
     final a = alvo ?? _alvo('');
-    await Impressora.enviar(a, cupomTeste(boot!.bar, a, '$modelo (${usuario?.nome ?? '-'})'));
+    await _imprimir(a, cupomTeste(boot!.bar, a, '$modelo (${usuario?.nome ?? '-'})'));
     erroImpressora = null;
     notifyListeners();
   }
@@ -398,11 +430,8 @@ class App extends ChangeNotifier {
     await api.post('/chamados/$id/atendido');
   }
 
-  /// O aparelho de menor id entre os online imprime os chamados (evita cupom repetido).
-  bool get _souQuemImprimeChamados {
-    final ids = [for (final a in aparelhos) a['device_id'] as String]..sort();
-    return ids.isEmpty || ids.first == deviceId;
-  }
+  /// O líder imprime os chamados (evita cupom repetido).
+  bool get _souQuemImprimeChamados => rede.souLider;
 
   Future<void> _imprimirChamados() async {
     if (!_souQuemImprimeChamados) return;
@@ -410,7 +439,7 @@ class App extends ChangeNotifier {
       final id = ch['id'] as int;
       if (ch['impresso'] == true || _chamadosImpressos.contains(id)) continue;
       try {
-        await Impressora.enviar(_alvo(''), cupomChamado(boot!.bar, ch));
+        await _imprimir(_alvo(''), cupomChamado(boot!.bar, ch));
         _chamadosImpressos.add(id);
         await api.post('/chamados/$id/impresso');
       } catch (e) {
@@ -426,7 +455,7 @@ class App extends ChangeNotifier {
     if (_ciclando || api.token == null) return;
     _ciclando = true;
     try {
-      await _lerBateria();
+      await lerBateria();
       // 1) envia o que está na fila
       for (var volta = 0; volta < 10; volta++) {
         final evs = await banco.naoEnviados();
@@ -445,19 +474,26 @@ class App extends ChangeNotifier {
         _ultimoSeq = ev['seq'] as int;
         ev.remove('seq');
         ev['hora'] = DateTime.parse(ev['hora'] as String).millisecondsSinceEpoch;
-        mudou |= await banco.inserirEvento(ev, enviado: true);
+        mudou |= await banco.inserirEvento(ev, enviado: true, confirmadoVps: true);
       }
       await banco.gravar('ultimo_seq', '$_ultimoSeq');
       // 3) presença: avisa que está vivo e recebe aparelhos/chamados
-      final ip = await _ipLocal();
+      final ip = await ipLocal();
       final p = await api.post('/presenca', {
         'ip': ip ?? '',
+        'porta': rede.ativa ? portaLan : null,
         'bateria': bateria,
         'carregando': carregando,
-        'lider': false,
-        'pendentes': await banco.contarNaoEnviados(),
+        'lider': rede.souLider,
+        'pendentes': await banco.contarPendentes(),
       });
       aparelhos = (p['aparelhos'] as List).cast<Map<String, dynamic>>();
+      for (final ap in aparelhos) {
+        // a VPS também conta onde estão os outros celulares do bar
+        if (ap['ip'] is String && ap['porta'] is int) {
+          rede.conhecer(ap['device_id'] as String, ap['ip'] as String, ap['porta'] as int, 'vps');
+        }
+      }
       chamados = (p['chamados'] as List).cast<Map<String, dynamic>>();
       if ((p['versao_cardapio'] as int) != boot?.bar.versaoCardapio) await atualizarCardapio();
       online = true;
@@ -465,7 +501,7 @@ class App extends ChangeNotifier {
       if (mudou) {
         await _recalcular();
       } else {
-        naFila = await banco.contarNaoEnviados();
+        naFila = await banco.contarPendentes();
       }
       unawaited(_imprimirChamados());
     } on ErroApi catch (e) {
@@ -495,15 +531,16 @@ class App extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _lerBateria() async {
+  Future<void> lerBateria() async {
     try {
       bateria = await _bateria.batteryLevel;
       final s = await _bateria.batteryState;
-      carregando = s == BatteryState.charging || s == BatteryState.full;
+      // na tomada conta como carregando, mesmo com a bateria cheia
+      carregando = s == BatteryState.charging || s == BatteryState.full || s == BatteryState.connectedNotCharging;
     } catch (_) {}
   }
 
-  Future<String?> _ipLocal() async {
+  Future<String?> ipLocal() async {
     try {
       final ip = await NetworkInfo().getWifiIP();
       if (ip != null) return ip;

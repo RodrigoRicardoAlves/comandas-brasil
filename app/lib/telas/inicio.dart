@@ -61,6 +61,12 @@ class _TelaInicioState extends State<TelaInicio> {
                   style: const TextStyle(fontSize: 13, color: Colors.white60)),
             ]),
             actions: [
+              if (a.rede.ativa && a.rede.vivos().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Icon(a.rede.souLider ? Icons.print : Icons.wifi,
+                      color: a.rede.souLider ? corAmbar : (a.rede.liderAlcancavel ? corVerde : corVermelha)),
+                ),
               Padding(
                 padding: const EdgeInsets.only(right: 4),
                 child: Icon(a.online ? Icons.cloud_done : Icons.cloud_off, color: a.online ? corVerde : corVermelha),

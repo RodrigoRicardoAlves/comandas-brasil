@@ -15,8 +15,17 @@ Future<void> main() async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   await App.i.iniciar();
   WakelockPlus.enable().catchError((_) {}); // tela não apaga durante o atendimento
+  // o app continua rodando quando a tela fecha (líder); ao voltar, religa a tela acesa e sincroniza
+  ouvinteCiclo = AppLifecycleListener(onResume: () {
+    WakelockPlus.enable().catchError((_) {});
+    App.i.ciclo();
+    App.i.rede.sincronizarJa();
+  });
   runApp(const ComandasApp());
 }
+
+/// Guardado para o ouvinte não ser descartado.
+AppLifecycleListener? ouvinteCiclo;
 
 class ComandasApp extends StatelessWidget {
   const ComandasApp({super.key});
