@@ -1,0 +1,16 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+servidor/media/
+servidor/staticfiles/
+cupons/
+.idea/
+# Flutter
+app/.dart_tool/
+app/build/
+app/.flutter-plugins*
+app/android/.gradle/
+app/android/local.properties
+app/android/key.properties
+*.jks
