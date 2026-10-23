@@ -41,6 +41,7 @@ object Sistema {
         ctx = act.applicationContext
         val c = MethodChannel(motor.dartExecutor.binaryMessenger, "comandas/sistema")
         canal = c
+        ImpressoraInterna.ligar(ctx)
         c.setMethodCallHandler { call, res ->
             try {
                 when (call.method) {
@@ -61,6 +62,9 @@ object Sistema {
                     "pedirRedeLocal" -> { pedirRedeLocal(); res.success(true) }
                     // identificador do Android: o mesmo depois de reinstalar o app
                     "idAparelho" -> res.success(Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ANDROID_ID))
+                    "temImpressoraInterna" -> res.success(ImpressoraInterna.existe)
+                    // devolve null quando imprimiu, ou a mensagem de erro
+                    "imprimirInterna" -> ImpressoraInterna.imprimir(call.argument<ByteArray>("dados")!!) { res.success(it) }
                     else -> res.notImplemented()
                 }
             } catch (e: Exception) {
@@ -80,6 +84,7 @@ object Sistema {
         val rssi = try { wifi.connectionInfo?.rssi } catch (_: Exception) { null }
         return mapOf(
             "economia" to pm.isPowerSaveMode,
+            "impressoraInterna" to ImpressoraInterna.existe,
             "rssi" to rssi,
             "otimizado" to !pm.isIgnoringBatteryOptimizations(ctx.packageName),
             "notificacao" to (Build.VERSION.SDK_INT < 33 ||

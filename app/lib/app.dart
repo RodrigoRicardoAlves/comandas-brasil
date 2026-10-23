@@ -397,7 +397,7 @@ class App extends ChangeNotifier {
     final foiImpresso = estado.impressos.contains('${item.pedido}:${item.setor}');
     if (c != null && item.imprime && foiImpresso) {
       try {
-        await _imprimir(_alvo(item.setor), cupomCancelamento(boot!.bar, c, item, usuario!.nome));
+        await _imprimir(_alvo(item.setor), (b) => cupomCancelamento(b, c, item, usuario!.nome));
       } catch (e) {
         _erroImpressao(e);
       }
@@ -409,7 +409,7 @@ class App extends ChangeNotifier {
 
   Future<void> imprimirConta(ComandaC c, {required bool servico, required int pessoas}) async {
     _exigirLogin();
-    await _imprimir(_alvo(''), cupomConta(boot!.bar, c, servico: servico, pessoas: pessoas));
+    await _imprimir(_alvo(''), (b) => cupomConta(b, c, servico: servico, pessoas: pessoas));
     erroImpressora = null;
     await _registrar('conta_impressa', {'comanda': c.uuid, 'servico': servico, 'pessoas': pessoas});
   }
@@ -512,7 +512,15 @@ class App extends ChangeNotifier {
   bool _imprimoEste(PedidoC p) => rede.souLider;
 
   /// Envia para a impressora: direto se for o líder, senão pede ao líder.
-  Future<void> _imprimir(String alvo, List<int> bytes) => rede.imprimir(alvo, bytes);
+  /// O cupom é montado para o papel do destino (a maquininha usa papel estreito).
+  Future<void> _imprimir(String alvo, List<int> Function(BarCfg b) cupom) {
+    final b = Impressora.ehInterna(alvo) ? boot!.bar.paraMaquininha : boot!.bar;
+    return rede.imprimir(alvo, cupom(b));
+  }
+
+  /// A impressora padrão deste aparelho é a embutida da maquininha.
+  bool get imprimeNaMaquininha =>
+      Impressora.ehInterna(impressoraLocal.isNotEmpty ? impressoraLocal : (boot?.bar.impressora ?? ''));
 
   bool _imprimindo = false;
   bool get imprimindo => _imprimindo;
@@ -529,7 +537,7 @@ class App extends ChangeNotifier {
         final c = estado.comandas[p.comanda];
         if (c == null) continue;
         try {
-          await _imprimir(_alvo(setor), cupomPedido(boot!.bar, c, p, setor));
+          await _imprimir(_alvo(setor), (b) => cupomPedido(b, c, p, setor));
           _tentativasImpressao.remove(ref);
           erroImpressora = null;
           await _registrar('impresso', {'ref': ref, 'setor': setor});
@@ -588,7 +596,7 @@ class App extends ChangeNotifier {
   Future<void> reimprimirPedido(PedidoC p) async {
     final c = estado.comandas[p.comanda]!;
     for (final s in p.setores) {
-      await _imprimir(_alvo(s), cupomPedido(boot!.bar, c, p, s, reimpressao: estado.impressos.contains('${p.uuid}:$s')));
+      await _imprimir(_alvo(s), (b) => cupomPedido(b, c, p, s, reimpressao: estado.impressos.contains('${p.uuid}:$s')));
       if (!estado.impressos.contains('${p.uuid}:$s')) await _registrar('impresso', {'ref': '${p.uuid}:$s', 'setor': s});
     }
     erroImpressora = null;
@@ -597,7 +605,7 @@ class App extends ChangeNotifier {
 
   Future<void> imprimirTeste([String? alvo]) async {
     final a = alvo ?? _alvo('');
-    await _imprimir(a, cupomTeste(boot!.bar, a, '$modelo (${usuario?.nome ?? '-'})'));
+    await _imprimir(a, (b) => cupomTeste(b, a, '$modelo (${usuario?.nome ?? '-'})'));
     erroImpressora = null;
     notifyListeners();
   }
@@ -625,7 +633,7 @@ class App extends ChangeNotifier {
       final id = ch['id'] as int;
       if (ch['impresso'] == true || _chamadosImpressos.contains(id)) continue;
       try {
-        await _imprimir(_alvo(''), cupomChamado(boot!.bar, ch));
+        await _imprimir(_alvo(''), (b) => cupomChamado(b, ch));
         _chamadosImpressos.add(id);
         await api.post('/chamados/$id/impresso');
       } catch (e) {

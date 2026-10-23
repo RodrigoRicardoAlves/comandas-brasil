@@ -1,15 +1,16 @@
 /// Escolha automática do celular líder (o que imprime e organiza a rede local).
 ///
 /// Regras (PROJETO.md, seção 7.2):
-/// - nota = bateria + 40 se carregando − 30 se economia de bateria + até 5 pelo sinal do Wi-Fi;
+/// - nota = bateria + 40 se carregando − 30 se economia de bateria + até 5 pelo sinal do Wi-Fi
+///   + 200 se a impressora do bar é a embutida deste aparelho (maquininha);
 /// - abaixo de 20% de bateria (sem carregar) não vira líder;
 /// - mandato numerado (termo): quem tem termo maior manda;
 /// - histerese: só troca se o outro tiver 25 pontos a mais, ou se o líder cair abaixo de 25%;
 /// - líder sumido (sem resposta por ~9 s): o melhor candidato assume.
 library;
 
-int calcularNota({int? bateria, bool carregando = false, bool economia = false, int? rssi}) {
-  var n = (bateria ?? 50) + (carregando ? 40 : 0) - (economia ? 30 : 0);
+int calcularNota({int? bateria, bool carregando = false, bool economia = false, int? rssi, bool imprimeAqui = false}) {
+  var n = (bateria ?? 50) + (carregando ? 40 : 0) - (economia ? 30 : 0) + (imprimeAqui ? 200 : 0);
   if (rssi != null && rssi < 0) n += ((rssi + 90) / 8).clamp(0, 5).round();
   return n;
 }

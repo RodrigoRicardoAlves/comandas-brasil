@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 
 /// Ponte com o código Android (android/.../Sistema.kt).
@@ -45,4 +47,20 @@ class Sistema {
   static Future<bool> abrirUrl(String url) async => await _chamar<bool>('abrirUrl', {'url': url}) ?? false;
   static Future<void> pedirRedeLocal() => _chamar('pedirRedeLocal');
   static Future<String?> idAparelho() => _chamar<String>('idAparelho');
+  static Future<bool> temImpressoraInterna() async => await _chamar<bool>('temImpressoraInterna') ?? false;
+
+  /// Imprime na impressora embutida (maquininha Sunmi). Devolve null quando deu certo, ou o erro.
+  static Future<String?> imprimirInterna(List<int> dados) async {
+    try {
+      return await _c
+          .invokeMethod<String>('imprimirInterna', {'dados': Uint8List.fromList(dados)})
+          .timeout(const Duration(seconds: 25));
+    } on MissingPluginException {
+      return 'Este aparelho não tem impressora embutida';
+    } on TimeoutException {
+      return 'A impressora da maquininha não respondeu';
+    } catch (e) {
+      return 'Impressora da maquininha: $e';
+    }
+  }
 }

@@ -1,6 +1,8 @@
 /// Monta os bytes ESC/POS de um cupom (mesma ideia da classe Ticket do sistema antigo).
 library;
 
+import 'dart:convert';
+
 const _semAcento = {
   'á': 'a', 'à': 'a', 'â': 'a', 'ã': 'a', 'ä': 'a', 'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e', 'í': 'i', 'ì': 'i',
   'î': 'i', 'ï': 'i', 'ó': 'o', 'ò': 'o', 'ô': 'o', 'õ': 'o', 'ö': 'o', 'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
@@ -25,7 +27,7 @@ String semAcentos(String s) => s.split('').map((c) => _semAcento[c] ?? c).join()
 
 class Cupom {
   final int colunas;
-  final String codificacao; // ascii | cp860 | cp850
+  final String codificacao; // ascii | cp860 | cp850 | utf8 (maquininha Sunmi)
   final bool cortar;
   int largura;
   final List<int> buf = [0x1B, 0x40]; // ESC @ (reinicia)
@@ -33,9 +35,11 @@ class Cupom {
   Cupom({this.colunas = 48, this.codificacao = 'ascii', this.cortar = true}) : largura = colunas {
     if (codificacao == 'cp860') buf.addAll([0x1B, 0x74, 3]);
     if (codificacao == 'cp850') buf.addAll([0x1B, 0x74, 2]);
+    if (codificacao == 'utf8') buf.addAll([0x1C, 0x43, 0xFF]); // FS C 255: texto em UTF-8 (Sunmi)
   }
 
   List<int> _codificar(String s) {
+    if (codificacao == 'utf8') return utf8.encode(s);
     final tabela = codificacao == 'cp860' ? _cp860 : (codificacao == 'cp850' ? _cp850 : null);
     final out = <int>[];
     for (final ch in s.runes.map(String.fromCharCode)) {

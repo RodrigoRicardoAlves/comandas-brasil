@@ -90,7 +90,8 @@ class RedeLocal {
   bool get liderAlcancavel => souLider || (parLider?.vivo(agoraMs()) ?? false);
 
   int get nota => calcularNota(
-      bateria: app.bateria, carregando: app.carregando, economia: sistema['economia'] == true, rssi: sistema['rssi'] as int?);
+      bateria: app.bateria, carregando: app.carregando, economia: sistema['economia'] == true, rssi: sistema['rssi'] as int?,
+      imprimeAqui: sistema['impressoraInterna'] == true && app.imprimeNaMaquininha);
   bool get elegivel => podeSerLider(bateria: app.bateria, carregando: app.carregando);
 
   void _log(String s) {
@@ -508,7 +509,8 @@ class RedeLocal {
   /// Só o líder fala com a impressora. Se o líder não estiver alcançável, imprime direto.
   Future<void> imprimir(String alvo, List<int> bytes) async {
     final l = parLider;
-    if (souLider || l == null || !l.vivo(agoraMs())) {
+    // a impressora embutida só existe neste aparelho: nunca passa pelo líder
+    if (Impressora.ehInterna(alvo) || souLider || l == null || !l.vivo(agoraMs())) {
       await Impressora.enviar(alvo, bytes);
       return;
     }

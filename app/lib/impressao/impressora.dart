@@ -1,10 +1,16 @@
 import 'dart:async';
 import 'dart:io';
 
-/// Envia bytes para a impressora térmica de rede (porta 9100).
+import '../sistema.dart';
+
+/// Envia bytes para a impressora térmica de rede (porta 9100) ou para a embutida da maquininha.
 /// Um cupom por vez: a impressora aceita uma conexão de cada vez.
 class Impressora {
   static Future<void> _fila = Future.value();
+
+  /// Endereço especial: a impressora embutida da maquininha (Sunmi) em que o app está rodando.
+  static const interna = 'maquininha';
+  static bool ehInterna(String alvo) => const {'maquininha', 'interna', 'sunmi'}.contains(alvo.trim().toLowerCase());
 
   static Future<void> enviar(String alvo, List<int> bytes) {
     final c = Completer<void>();
@@ -20,6 +26,11 @@ class Impressora {
   }
 
   static Future<void> _enviar(String alvo, List<int> bytes) async {
+    if (ehInterna(alvo)) {
+      final erro = await Sistema.imprimirInterna(bytes);
+      if (erro != null) throw ErroImpressora(erro);
+      return;
+    }
     final a = alvo.trim().replaceFirst(RegExp(r'^tcp://'), '');
     if (a.isEmpty) throw ErroImpressora('Impressora não configurada');
     final partes = a.split(':');

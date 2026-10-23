@@ -63,3 +63,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // impressora embutida das maquininhas Sunmi (em celular comum não faz nada)
+    implementation("com.sunmi:printerlibrary:1.0.24")
+}

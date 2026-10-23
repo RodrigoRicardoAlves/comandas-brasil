@@ -18,6 +18,19 @@ class BarCfg {
         versaoCardapio = j['versao_cardapio'] ?? 0,
         cortar = j['cortar_papel'] ?? true,
         taxaServico = (j['taxa_servico'] ?? 0).toDouble();
+
+  BarCfg._papel(BarCfg b, {required this.colunas, required this.codificacao, required this.cortar})
+      : id = b.id,
+        nome = b.nome,
+        slug = b.slug,
+        rodape = b.rodape,
+        impressora = b.impressora,
+        maxComanda = b.maxComanda,
+        versaoCardapio = b.versaoCardapio,
+        taxaServico = b.taxaServico;
+
+  /// Papel da impressora embutida da maquininha: 58 mm (32 colunas), UTF-8, sem cortador.
+  BarCfg get paraMaquininha => BarCfg._papel(this, colunas: 32, codificacao: 'utf8', cortar: false);
 }
 
 class Usuario {

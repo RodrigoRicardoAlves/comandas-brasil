@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../app.dart';
+import '../impressao/impressora.dart';
+import '../sistema.dart';
 import 'bateria.dart';
 import 'comum.dart';
 
@@ -13,6 +15,21 @@ class TelaStatus extends StatefulWidget {
 
 class _TelaStatusState extends State<TelaStatus> {
   late final _impressora = TextEditingController(text: App.i.impressoraLocal);
+  bool _temInterna = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Sistema.temImpressoraInterna().then((v) {
+      if (mounted) setState(() => _temInterna = v);
+    });
+  }
+
+  Future<void> _usar(String v) async {
+    _impressora.text = v;
+    await App.i.definirImpressoraLocal(v);
+    if (mounted) aviso(context, v.isEmpty ? 'Voltou para a impressora do bar' : 'Esta maquininha vai imprimir');
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,13 +59,37 @@ class _TelaStatusState extends State<TelaStatus> {
                 controller: _impressora,
                 decoration: const InputDecoration(
                   labelText: 'Usar outra neste celular (opcional)',
-                  hintText: 'ex.: 192.168.1.50:9100',
+                  hintText: 'ex.: 192.168.1.50:9100 ou maquininha',
                   helperText: 'Vazio = usa a do bar',
                 ),
                 keyboardType: TextInputType.url,
                 onSubmitted: a.definirImpressoraLocal,
               ),
             ),
+            if (_temInterna)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                child: Impressora.ehInterna(a.impressoraLocal)
+                    ? OutlinedButton.icon(
+                        icon: const Icon(Icons.print_disabled),
+                        onPressed: () => _usar(''),
+                        label: const Text('Parar de usar a impressora da maquininha'),
+                      )
+                    : FilledButton.tonalIcon(
+                        icon: const Icon(Icons.point_of_sale),
+                        onPressed: () => _usar(Impressora.interna),
+                        label: const Text('Usar a impressora desta maquininha'),
+                      ),
+              ),
+            if (_temInterna && Impressora.ehInterna(a.impressoraLocal))
+              const Padding(
+                padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Text(
+                  'Os pedidos de todos os garçons saem aqui: esta maquininha vira o líder da rede '
+                  '(deixe-a ligada, no Wi-Fi do bar e de preferência carregando).',
+                  style: TextStyle(fontSize: 13, color: Colors.white70),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(children: [

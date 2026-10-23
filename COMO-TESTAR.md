@@ -33,7 +33,9 @@ Com impressora de verdade, troque pelo IP dela.
 6. **Mesmo PIN em dois celulares:** tente entrar com a Maria em dois — o segundo é recusado.
 7. **Gerente:** menu ⋮ → Esgotados (marca/desmarca); Painel → Relatórios, Cardápio, Equipe, QR Code.
 8. **Cliente:** abra o cardápio do QR, toque "Chamar o garçom" → sai cupom e aparece no app.
-9. **Atualização:** quando houver versão nova publicada, aparece uma faixa azul no app: toque e instale.
+9. **Maquininha Sunmi (P2):** menu ⋮ → Status e impressora → "Usar a impressora desta maquininha".
+   Ela vira a líder e imprime os pedidos de todos (papel 58 mm, 32 colunas).
+10. **Atualização:** quando houver versão nova publicada, aparece uma faixa azul no app: toque e instale.
 
 ## Publicar nova versão do app
 Suba `version:` em `app/pubspec.yaml` (ex.: `1.0.3+4`) e rode `app/publicar.sh "o que mudou"`.
