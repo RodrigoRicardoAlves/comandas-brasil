@@ -405,3 +405,6 @@ Cada etapa termina com algo testável.
   mais recente, `login_em`, o mesmo critério do servidor; o outro volta ao PIN com aviso e os registros ficam guardados).
   Entrar sem internet guarda o PIN só na memória e confirma no servidor quando conectar.
   "Trocar garçom" e "Encerrar turno" avisam o servidor (`/logout`).
+- 2026-10-22: com o túnel público no ar, DEBUG foi desligado no .env (a página de erro técnica
+  aparecia para qualquer um). Fotos servidas por rota própria; o dev roda `runserver --insecure`
+  para servir o CSS do admin. Na VPS: gunicorn + nginx, e ligar cookies seguros/HSTS.
