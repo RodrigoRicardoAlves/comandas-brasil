@@ -2,6 +2,7 @@
 {% block titulo %}Cardápio{% endblock %}
 {% block conteudo %}
 <div class="linha"><h1 class="esp">Cardápio</h1>
+  <a class="btn" href="{% url 'publico:cardapio' request.bar.slug %}" target="_blank" rel="noopener">👁 Ver cardápio</a>
   <a class="btn" href="{% url 'painel:categoria_nova' %}">+ Categoria</a>
   <a class="btn prim" href="{% url 'painel:produto_novo' %}">+ Produto</a></div>
 {% if not setores %}<div class="msg error">Crie pelo menos um <a href="{% url 'painel:setores' %}">setor de impressão</a> (ex.: Cozinha) para os produtos que imprimem.</div>{% endif %}
