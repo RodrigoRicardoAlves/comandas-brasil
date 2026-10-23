@@ -64,7 +64,7 @@ class ServicoLider : Service() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val b = if (Build.VERSION.SDK_INT >= 26) Notification.Builder(this, CANAL) else @Suppress("DEPRECATION") Notification.Builder(this)
-        return b.setContentTitle("Comandas")
+        return b.setContentTitle("Comandas Brasil")
             .setContentText(texto)
             .setSmallIcon(android.R.drawable.stat_sys_upload_done)
             .setOngoing(true)

@@ -35,7 +35,7 @@ class ComandasApp extends StatelessWidget {
     const ambar = Color(0xFFFFB020);
     final esquema = ColorScheme.fromSeed(seedColor: ambar, brightness: Brightness.dark, primary: ambar);
     return MaterialApp(
-      title: 'Comandas',
+      title: 'Comandas Brasil',
       debugShowCheckedModeBanner: false,
       locale: const Locale('pt', 'BR'),
       supportedLocales: const [Locale('pt', 'BR')],

@@ -167,3 +167,47 @@ class UmCelularPorGarcomTest(Base):
         t1 = Aparelho.objects.get(device_id='cel1').token
         self.login('bar-a', dev='cel2')
         self.assertEqual(self.get('/bootstrap', t1).status_code, 401)
+
+
+class GerenteAppTest(Base):
+    def setUp(self):
+        super().setUp()
+        from cardapio.models import Categoria, Produto
+        g = Usuario(bar=self.a, nome='Gê', papel='gerente')
+        g.definir_pin('9999')
+        g.save()
+        cat = Categoria.objects.create(bar=self.a, nome='Porções')
+        self.p = Produto.objects.create(bar=self.a, categoria=cat, nome='Batata')
+        cb = Categoria.objects.create(bar=self.b, nome='X')
+        self.pb = Produto.objects.create(bar=self.b, categoria=cb, nome='Do outro bar')
+
+    def test_garcom_nao_pode(self):
+        t = self.login('bar-a')
+        self.assertEqual(self.post(f'/produtos/{self.p.pk}/esgotado', {'esgotado': True}, t).status_code, 403)
+
+    def test_gerente_marca_e_versao_sobe(self):
+        t = self.login('bar-a', pin='9999', dev='g1')
+        antes = Bar.objects.get(pk=self.a.pk).versao_cardapio
+        r = self.post(f'/produtos/{self.p.pk}/esgotado', {'esgotado': True}, t)
+        self.assertEqual(r.status_code, 200)
+        self.p.refresh_from_db()
+        self.assertTrue(self.p.esgotado)
+        self.assertGreater(r.json()['versao_cardapio'], antes)
+        # produto de outro bar: não encontra
+        self.assertEqual(self.post(f'/produtos/{self.pb.pk}/esgotado', {'esgotado': True}, t).status_code, 404)
+
+    def test_versao_do_app_sem_publicar(self):
+        import tempfile
+        from pathlib import Path
+
+        from django.test import override_settings
+        with override_settings(MEDIA_ROOT=Path(tempfile.mkdtemp())):
+            self._sem_app()
+
+    def _sem_app(self):
+        r = self.client.get('/api/v1/app')
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json()['build'], 0)
+        self.assertEqual(self.client.get('/app/comandas.apk').status_code, 404)
+        self.assertEqual(self.client.get('/privacidade/').status_code, 200)
+        self.assertContains(self.client.get('/'), 'TABELA DA CASA')

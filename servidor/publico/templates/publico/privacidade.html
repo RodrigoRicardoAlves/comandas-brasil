@@ -1,0 +1,49 @@
+{% load static %}<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comandas Brasil · Política de privacidade</title>
+<style>
+  body { margin:0; background:#f6f5f2; color:#1d1d1f; font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:720px; margin:auto; padding:28px 16px 60px; } h1 { font-size:24px; } h2 { font-size:18px; margin-top:26px; }
+</style>
+</head>
+<body><main>
+<img src="{% static 'publico/logo.png' %}?v=3" alt="Comandas Brasil" style="width:260px">
+<h1>Política de privacidade · Comandas Brasil</h1>
+<p>O Comandas Brasil é um sistema de comandas para bares. O app é usado por garçons e gerentes; o cardápio
+público é usado por clientes do bar. Última atualização: 22/10/2026.</p>
+
+<h2>O que o app guarda</h2>
+<ul>
+  <li><b>Dados do atendimento</b>: comandas (número e o nome que o cliente informa), pedidos, valores,
+      cancelamentos e fechamentos, com o nome do garçom que fez cada registro.</li>
+  <li><b>Dados do aparelho</b>: um identificador gerado pelo próprio app, modelo do celular, versão do app,
+      nível de bateria, se está carregando e o endereço IP na rede Wi-Fi do bar. São usados para os celulares
+      do bar se encontrarem e escolherem qual deles cuida da impressora.</li>
+  <li><b>PIN</b>: guardado apenas como código embaralhado (hash), nunca em texto.</li>
+</ul>
+<p>O app <b>não</b> acessa contatos, fotos, localização GPS, microfone ou câmera, e não exibe anúncios.</p>
+
+<h2>Cardápio público e "chamar o garçom"</h2>
+<p>Quem chama o garçom pelo cardápio informa o número da comanda ou um nome/mesa. Guardamos isso, o motivo
+e o endereço IP (para evitar abusos) por até 90 dias.</p>
+
+<h2>Com quem compartilhamos</h2>
+<p>Com ninguém. Os dados ficam no servidor do sistema e nos celulares do próprio bar. Cada bar só vê os
+próprios dados.</p>
+
+<h2>Por que o app pede algumas permissões</h2>
+<ul>
+  <li><b>Rede e Wi-Fi</b>: falar com o servidor, com os outros celulares do bar e com a impressora de rede.</li>
+  <li><b>Notificações e serviço em primeiro plano</b>: quando o celular é o "líder" do bar, ele mostra uma
+      notificação fixa enquanto mantém a conexão com a impressora de rede.</li>
+  <li><b>Ignorar otimização de bateria</b>: para o líder não ser desligado pelo sistema no meio do expediente.</li>
+</ul>
+
+<h2>Seus direitos (LGPD)</h2>
+<p>Para pedir acesso, correção ou exclusão de dados, fale com o responsável pelo bar{% if contato %} ou
+escreva para <b>{{ contato }}</b>{% endif %}.</p>
+</main></body>
+</html>

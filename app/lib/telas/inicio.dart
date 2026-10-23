@@ -6,6 +6,8 @@ import '../util.dart';
 import 'comanda.dart';
 import 'comum.dart';
 import 'fechadas.dart';
+import 'bateria.dart';
+import 'esgotados.dart';
 import 'pendencias.dart';
 import 'status.dart';
 
@@ -17,6 +19,19 @@ class TelaInicio extends StatefulWidget {
 
 class _TelaInicioState extends State<TelaInicio> {
   String _busca = '';
+
+  @override
+  void initState() {
+    super.initState();
+    // primeiro uso neste celular: mostra o guia de bateria uma vez
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final a = App.i;
+      if (await a.banco.ler('guia_bateria_visto') == null && mounted) {
+        await a.banco.gravar('guia_bateria_visto', '1');
+        if (mounted) Navigator.push(context, MaterialPageRoute(builder: (_) => const TelaBateria()));
+      }
+    });
+  }
 
   Future<void> _abrir() async {
     final c = await dialogoComanda(context);
@@ -32,6 +47,10 @@ class _TelaInicioState extends State<TelaInicio> {
         Navigator.push(context, MaterialPageRoute(builder: (_) => const TelaStatus()));
       case 'fechadas':
         Navigator.push(context, MaterialPageRoute(builder: (_) => const TelaFechadas()));
+      case 'esgotados':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const TelaEsgotados()));
+      case 'bateria':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const TelaBateria()));
       case 'trocar':
         await a.trocarUsuario();
       case 'encerrar':
@@ -77,6 +96,9 @@ class _TelaInicioState extends State<TelaInicio> {
                 itemBuilder: (_) => [
                   const PopupMenuItem(value: 'status', child: ListTile(leading: Icon(Icons.settings), title: Text('Status e impressora'))),
                   const PopupMenuItem(value: 'fechadas', child: ListTile(leading: Icon(Icons.history), title: Text('Comandas fechadas'))),
+                  if (a.usuario!.gerente)
+                    const PopupMenuItem(value: 'esgotados', child: ListTile(leading: Icon(Icons.block), title: Text('Esgotados'))),
+                  const PopupMenuItem(value: 'bateria', child: ListTile(leading: Icon(Icons.battery_charging_full), title: Text('Bateria e segundo plano'))),
                   const PopupMenuItem(value: 'trocar', child: ListTile(leading: Icon(Icons.switch_account), title: Text('Trocar garçom'))),
                   const PopupMenuItem(value: 'encerrar', child: ListTile(leading: Icon(Icons.logout), title: Text('Encerrar turno'))),
                 ],

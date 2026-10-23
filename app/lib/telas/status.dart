@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app.dart';
-import '../sistema.dart';
+import 'bateria.dart';
 import 'comum.dart';
 
 /// Situação do celular, da conexão e da impressora.
@@ -111,15 +111,17 @@ class _TelaStatusState extends State<TelaStatus> {
                   trailing: Text('${p.bateria ?? '?'}%${p.carregando ? ' ⚡' : ''}'),
                 ),
               if (a.rede.pares.isEmpty) const ListTile(dense: true, title: Text('Nenhum outro celular encontrado')),
-              if (a.rede.sistema['otimizado'] == true)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.battery_alert),
-                    onPressed: Sistema.abrirBateria,
-                    label: const Text('Tirar o app da economia de bateria'),
-                  ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: OutlinedButton.icon(
+                  icon: Icon(a.rede.sistema['otimizado'] == true ? Icons.battery_alert : Icons.battery_charging_full,
+                      color: a.rede.sistema['otimizado'] == true ? corAmbar : null),
+                  onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TelaBateria())),
+                  label: Text(a.rede.sistema['otimizado'] == true
+                      ? 'App sujeito à economia de bateria: corrigir'
+                      : 'Guia de bateria e segundo plano'),
                 ),
+              ),
               for (final l in a.rede.registro.take(6))
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 1),

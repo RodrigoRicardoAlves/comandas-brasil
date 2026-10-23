@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app.dart';
+import '../sistema.dart';
 
 const corVerde = Color(0xFF3DDC84);
 const corVermelha = Color(0xFFFF5A5F);
@@ -158,14 +159,26 @@ class BarraStatus extends StatelessWidget {
         } else if (a.naFila > 0) {
           avisos.add((corAmbar, Icons.cloud_upload_outlined, 'Enviando ${a.naFila}...'));
         }
-        if (a.erroImpressora != null) avisos.add((corVermelha, Icons.print_disabled, a.erroImpressora!));
+        if (a.erroImpressora != null) {
+          avisos.add((corVermelha, Icons.print_disabled, a.erroImpressora!));
+        } else if (a.erroImpressoraBar != null) {
+          // erro no celular líder: todos ficam sabendo (o cupom de quem lançou pode não ter saído)
+          avisos.add((corVermelha, Icons.print_disabled, 'Impressora (no celular líder): ${a.erroImpressoraBar}'));
+        }
+        if (a.atualizacao != null) {
+          avisos.add((corAzul, Icons.system_update, 'Nova versão do app (${a.atualizacao!['versao']}): toque para baixar'));
+        }
         if (avisos.isEmpty) return const SizedBox.shrink();
         return Column(children: [
           for (final (cor, ic, txt) in avisos)
             Material(
               color: cor.withValues(alpha: .18),
               child: InkWell(
-                onTap: ic == Icons.print_disabled ? () => App.i.imprimirPendentes(forcar: true) : null,
+                onTap: switch (ic) {
+                  Icons.print_disabled => () => App.i.imprimirPendentes(forcar: true),
+                  Icons.system_update => () => Sistema.abrirUrl('${App.i.atualizacao!['url']}'),
+                  _ => null,
+                },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   child: Row(children: [

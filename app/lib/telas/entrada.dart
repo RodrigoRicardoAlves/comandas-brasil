@@ -33,10 +33,8 @@ class _TelaEntradaState extends State<TelaEntrada> {
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                const Icon(Icons.receipt_long, size: 64, color: corAmbar),
-                const SizedBox(height: 8),
-                const Text('Comandas', textAlign: TextAlign.center, style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 6),
+                Image.asset('assets/logo.png', height: 190, semanticLabel: 'Comandas Brasil'),
+                const SizedBox(height: 10),
                 const Text('Primeiro acesso deste celular. Precisa de internet só agora.',
                     textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
                 const SizedBox(height: 28),

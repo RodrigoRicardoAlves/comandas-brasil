@@ -22,6 +22,10 @@ ALLOWED_HOSTS = env_lista('ALLOWED_HOSTS', 'localhost,127.0.0.1')
 CSRF_TRUSTED_ORIGINS = env_lista('CSRF_TRUSTED_ORIGINS')
 # atrás do túnel da Cloudflare o acesso chega como HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# na VPS (só HTTPS): cookies seguros. Em dev o painel também abre por http na rede local.
+if env('HTTPS', '0') == '1':
+    SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 60 * 60 * 24 * 30
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -98,6 +102,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # endereço público (vai no QR Code do cardápio)
 SITE_URL = env('SITE_URL', 'https://bar.rodrigoricardo.eng.br').rstrip('/')
+# e-mail de contato mostrado na política de privacidade (exigida pela Play Store)
+CONTATO_EMAIL = env('CONTATO_EMAIL', '')
 
 # o "dia de expediente" vai das 06:00 às 05:59 do dia seguinte
 INICIO_EXPEDIENTE = 6

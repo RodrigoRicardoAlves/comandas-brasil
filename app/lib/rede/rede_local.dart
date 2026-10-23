@@ -22,6 +22,7 @@ class Par {
   int porta;
   String usuario = '', modelo = '';
   int? usuarioId;
+  String? erroImpressora; // o líder informa se a impressora está com problema
   int loginEm = 0;
   int nota = 0, termo = 0;
   String? lider;
@@ -180,6 +181,7 @@ class RedeLocal {
         'bateria': app.bateria,
         'carregando': app.carregando,
         'pendentes': app.naFila,
+        'erro_impressora': souLider ? app.erroImpressora : null,
       };
 
   void _atualizarPar(Map<String, dynamic> j, String? ip) {
@@ -203,6 +205,7 @@ class RedeLocal {
     p.bateria = j['bateria'] as int?;
     p.carregando = j['carregando'] == true;
     p.pendentes = (j['pendentes'] ?? 0) as int;
+    p.erroImpressora = j['erro_impressora'] as String?;
     p.vistoMs = agoraMs();
     p.falhas = 0;
     p.origens.add('rede');

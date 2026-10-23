@@ -39,4 +39,10 @@ class Sistema {
       _chamar('nsdIniciar', {'porta': porta, 'bar': bar, 'id': id});
   static Future<void> nsdParar() => _chamar('nsdParar');
   static Future<void> abrirBateria() => _chamar('abrirBateria');
+  static Future<bool> pedirSemOtimizacao() async => await _chamar<bool>('pedirSemOtimizacao') ?? false;
+  static Future<bool> abrirAppConfig() async => await _chamar<bool>('abrirAppConfig') ?? false;
+  static Future<bool> abrirAutoInicio() async => await _chamar<bool>('abrirAutoInicio') ?? false;
+  static Future<bool> abrirUrl(String url) async => await _chamar<bool>('abrirUrl', {'url': url}) ?? false;
+  static Future<void> pedirRedeLocal() => _chamar('pedirRedeLocal');
+  static Future<String?> idAparelho() => _chamar<String>('idAparelho');
 }

@@ -5,6 +5,8 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.ComponentName
+import android.net.Uri
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
@@ -52,6 +54,13 @@ object Sistema {
                     }
                     "nsdParar" -> { nsdParar(); res.success(true) }
                     "abrirBateria" -> { abrirBateria(); res.success(true) }
+                    "pedirSemOtimizacao" -> res.success(pedirSemOtimizacao())
+                    "abrirAppConfig" -> res.success(abrir(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + ctx.packageName))))
+                    "abrirAutoInicio" -> res.success(abrirAutoInicio())
+                    "abrirUrl" -> res.success(abrir(Intent(Intent.ACTION_VIEW, Uri.parse(call.argument<String>("url")!!))))
+                    "pedirRedeLocal" -> { pedirRedeLocal(); res.success(true) }
+                    // identificador do Android: o mesmo depois de reinstalar o app
+                    "idAparelho" -> res.success(Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ANDROID_ID))
                     else -> res.notImplemented()
                 }
             } catch (e: Exception) {
@@ -112,6 +121,47 @@ object Sistema {
             a.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
             a.requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 10)
+        }
+    }
+
+    private fun abrir(i: Intent): Boolean = try {
+        ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+    } catch (e: Exception) {
+        false
+    }
+
+    /** Janela do Android "Permitir que o app rode em segundo plano?" (um toque). */
+    private fun pedirSemOtimizacao(): Boolean {
+        val pm = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager
+        if (pm.isIgnoringBatteryOptimizations(ctx.packageName)) return true
+        @Suppress("BatteryLife")
+        val i = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + ctx.packageName))
+        return abrir(i) || abrir(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+    }
+
+    /** Tela de "início automático" de cada fabricante (Xiaomi, Oppo, Vivo, Huawei...). */
+    private fun abrirAutoInicio(): Boolean {
+        val telas = listOf(
+            "com.miui.securitycenter" to "com.miui.permcenter.autostart.AutoStartManagementActivity",
+            "com.coloros.safecenter" to "com.coloros.safecenter.permission.startup.StartupAppListActivity",
+            "com.oppo.safe" to "com.oppo.safe.permission.startup.StartupAppListActivity",
+            "com.vivo.permissionmanager" to "com.vivo.permissionmanager.activity.BgStartUpManagerActivity",
+            "com.huawei.systemmanager" to "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity",
+            "com.samsung.android.lool" to "com.samsung.android.sm.battery.ui.BatteryActivity",
+        )
+        for ((pacote, tela) in telas) {
+            if (abrir(Intent().setComponent(ComponentName(pacote, tela)))) return true
+        }
+        return false
+    }
+
+    /** Android 16+: permissão para falar com aparelhos da rede local (impressora e outros celulares). */
+    private fun pedirRedeLocal() {
+        val a = activity ?: return
+        val p = "android.permission.ACCESS_LOCAL_NETWORK"
+        if (Build.VERSION.SDK_INT >= 36 && a.checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) {
+            a.requestPermissions(arrayOf(p), 11)
         }
     }
 

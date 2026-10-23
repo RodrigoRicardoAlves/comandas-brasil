@@ -8,8 +8,11 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <!-- Android 16+: acesso à rede local (impressora e outros celulares do bar) -->
+    <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK"/>
     <application
-        android:label="Comandas"
+        android:label="Comandas Brasil"
         android:usesCleartextTraffic="true"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">

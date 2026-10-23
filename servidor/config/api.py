@@ -3,8 +3,11 @@
 Toda rota autenticada recebe o aparelho logado em `request.auth`, e TODA consulta é
 filtrada por `request.auth.bar` — é isso que impede um bar de ver os dados do outro.
 """
+import json
 import time
 from datetime import timedelta
+
+from django.conf import settings
 
 from django.db.models import Prefetch
 from django.utils import timezone
@@ -30,7 +33,7 @@ class TokenAparelho(HttpBearer):
         return ap
 
 
-api = NinjaAPI(title='Comandas', version='1', auth=TokenAparelho(), urls_namespace='api')
+api = NinjaAPI(title='Comandas Brasil', version='1', auth=TokenAparelho(), urls_namespace='api')
 
 
 # ------------------------------------------------------------------ login
@@ -218,3 +221,41 @@ def chamado_atendido(request, cid: int):
     Chamado.objects.filter(bar=request.auth.bar, id=cid, atendido_em=None).update(
         atendido_em=timezone.now(), atendido_por=request.auth.usuario.nome)
     return {'ok': True}
+
+
+# ------------------------------------------------------------------ gerente pelo app
+
+class EsgotadoIn(Schema):
+    esgotado: bool
+
+
+@api.post('/produtos/{pid}/esgotado')
+def marcar_esgotado(request, pid: int, d: EsgotadoIn):
+    """Gerente marca/desmarca produto esgotado pelo celular (precisa de internet)."""
+    u = request.auth.usuario
+    if not u.gerente:
+        raise HttpError(403, 'Só o gerente pode mudar o cardápio')
+    p = Produto.objects.filter(bar=request.auth.bar, pk=pid).first()
+    if not p:
+        raise HttpError(404, 'Produto não encontrado')
+    p.esgotado = d.esgotado
+    p.save(update_fields=['esgotado'])  # o sinal sobe a versão: os outros celulares baixam de novo
+    return {'ok': True, 'versao_cardapio': Bar.objects.values_list('versao_cardapio', flat=True).get(pk=p.bar_id)}
+
+
+# ------------------------------------------------------------------ versão do app (APK direto)
+
+def info_app():
+    """Lê media/app/versao.json, gravado pelo script app/publicar.sh."""
+    try:
+        with open(settings.MEDIA_ROOT / 'app' / 'versao.json') as f:
+            v = json.load(f)
+    except (OSError, ValueError):
+        return None
+    v['url'] = f'{settings.SITE_URL}/app/comandas.apk'
+    return v
+
+
+@api.get('/app', auth=None)
+def versao_app(request):
+    return info_app() or {'versao': None, 'build': 0, 'url': None}

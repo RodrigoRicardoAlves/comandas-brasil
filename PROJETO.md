@@ -1,4 +1,4 @@
-# Comandas — sistema de comandas para bares (multi-bar, celular + VPS)
+# Comandas Brasil — sistema de comandas para bares (multi-bar, celular + VPS)
 
 > Documento-base do projeto. Serve como prompt para quem (pessoa ou agente) for
 > implementar. Tudo aqui foi combinado com o dono do projeto; mudanças devem ser
@@ -408,3 +408,18 @@ Cada etapa termina com algo testável.
 - 2026-10-22: com o túnel público no ar, DEBUG foi desligado no .env (a página de erro técnica
   aparecia para qualquer um). Fotos servidas por rota própria; o dev roda `runserver --insecure`
   para servir o CSS do admin. Na VPS: gunicorn + nginx, e ligar cookies seguros/HSTS.
+- 2026-10-22: **etapa 7 e acabamento**. Nome do produto: **Comandas Brasil** (logo retrô gerado por
+  `loja/gerar_logo.py`, fontes Lobster/Bebas Neue/Rock Salt, licenças livres). Feito:
+  - ícone próprio (comanda creme sobre azul-marinho), APK **assinado** (chave em `~/chaves-comandas/`, fora do git),
+    `app/publicar.sh` publica em `/app/` com `versao.json`; o app avisa "Nova versão" (faixa azul).
+  - Página inicial retrô em `/` (varal de lâmpadas, letreiro pendurado, neon, tabela de preços de letras,
+    baleiro de dicas, lousa "como funciona"); `/app/` (download + instruções + QR); `/privacidade/`.
+  - Guia de bateria por fabricante (abre no primeiro uso; Xiaomi/Samsung/Motorola/outros), pedido direto de
+    "ignorar otimização de bateria", atalho de início automático; permissão de rede local (Android 16+).
+  - Erro de impressora do líder aparece em todos os celulares; gerente marca "esgotado" pelo app (API
+    `/produtos/{id}/esgotado`, só gerente).
+  - Envio da fila com o app fechado (WorkManager, ~15 min, só se o app não estiver aberto).
+  - device_id passa a vir do ANDROID_ID (reinstalar o app não "prende" o garçom no aparelho antigo).
+  - Arquivos de produção em `deploy/` (gunicorn, nginx, guia da VPS); `COMO-TESTAR.md`; `loja/PLAY_STORE.md`.
+  - Ainda não feito: ordenação HLC (usa o relógio do celular), teste com 3 celulares, aviso de isolamento
+    testado numa rede de visitantes; a VPS em si.

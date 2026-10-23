@@ -1,0 +1,293 @@
+{% load static %}<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comandas Brasil · comandas de bar pelo celular</title>
+<meta name="description" content="Sistema de comandas para bar pelo celular dos garçons. Descomplicado, funciona sem internet, imprime na cozinha e na churrasqueira.">
+<meta name="theme-color" content="#2a1a10">
+<meta property="og:title" content="Comandas Brasil">
+<meta property="og:description" content="Comandas de bar pelo celular. Sem computador no balcão, funciona até sem internet.">
+<meta property="og:image" content="{% static 'publico/logo.png' %}?v=3">
+<style>
+  @font-face { font-family: Letreiro; src: url("{% static 'publico/fontes/Lobster-Regular.ttf' %}") format("truetype"); font-display: swap; }
+  @font-face { font-family: Bloco; src: url("{% static 'publico/fontes/BebasNeue-Regular.ttf' %}") format("truetype"); font-display: swap; }
+  @font-face { font-family: Giz; src: url("{% static 'publico/fontes/RockSalt-Regular.ttf' %}") format("truetype"); font-display: swap; }
+  :root {
+    --marinho:#1e3a5f; --marinho-esc:#12223a; --creme:#f3e6c8; --vermelho:#c8372d; --vermelho-esc:#7a1c18;
+    --amarelo:#f2b33d; --madeira:#5a3a22; --madeira-esc:#3a2414; --lousa:#22322a; --neon:#ff5a4e;
+  }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; background:#160e08; }
+  body {
+    margin:0; color:var(--creme); font:17px/1.55 Georgia, "Times New Roman", serif;
+    background-color:var(--madeira);
+    /* lambri de madeira: tábuas verticais com veios */
+    background-image:
+      repeating-linear-gradient(90deg, rgba(0,0,0,.35) 0 3px, transparent 3px 118px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 1px, transparent 1px 7px, rgba(0,0,0,.05) 7px 9px, transparent 9px 23px),
+      linear-gradient(180deg, #6b4529 0%, #573823 40%, #4a2f1c 100%);
+    overflow-x:hidden;
+  }
+  a { color:inherit; }
+  .grao { position:fixed; inset:0; pointer-events:none; opacity:.18; mix-blend-mode:multiply; z-index:50;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.7'/></svg>"); }
+
+  /* ---------- teto: varal de lâmpadas e bandeirinhas ---------- */
+  .teto { position:relative; height:120px; background:linear-gradient(#1b110a, #2a1a10 70%, transparent); }
+  .teto svg { position:absolute; left:0; top:0; width:100%; height:120px; }
+  .lamp { animation: brilho 2.6s ease-in-out infinite; }
+  .lamp:nth-child(3n) { animation-delay:.7s } .lamp:nth-child(4n) { animation-delay:1.3s }
+  @keyframes brilho { 0%,100% { opacity:1 } 50% { opacity:.65 } }
+
+  /* ---------- letreiro pendurado ---------- */
+  .palco { position:relative; text-align:center; padding:0 16px; margin-top:-48px; z-index:2; }
+  .pendurado { display:inline-block; position:relative; transform-origin:50% -60px; animation:balanca 6s ease-in-out infinite; max-width:640px; width:100%; }
+  @keyframes balanca { 0%,100% { transform:rotate(-1.4deg) } 50% { transform:rotate(1.4deg) } }
+  .corrente { position:absolute; top:-62px; width:6px; height:78px;
+    background:repeating-linear-gradient(180deg, #b9b2a3 0 9px, #6f6a60 9px 11px, transparent 11px 13px); border-radius:3px; }
+  .corrente.e { left:22% } .corrente.d { right:22% }
+  .pendurado img { width:100%; height:auto; display:block; filter:drop-shadow(0 18px 18px rgba(0,0,0,.55)); }
+
+  .chamada { max-width:820px; margin:18px auto 0; text-align:center; padding:0 16px; }
+  .chamada h1 { font-family:Letreiro, cursive; font-weight:normal; font-size:clamp(34px, 6vw, 58px); line-height:1.1; margin:10px 0 6px;
+    color:var(--creme); text-shadow:3px 3px 0 var(--vermelho-esc), 6px 6px 0 rgba(0,0,0,.35); }
+  .chamada p { font-size:clamp(17px, 2.4vw, 21px); margin:6px auto 0; max-width:640px; color:#ecdcb8; }
+  .botoes { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin:26px 0 8px; }
+  .btn { font-family:Bloco, Impact, sans-serif; letter-spacing:.06em; font-size:23px; text-decoration:none; padding:12px 26px 9px;
+    border-radius:8px; border:3px solid var(--creme); box-shadow:4px 4px 0 rgba(0,0,0,.45); transition:transform .12s; display:inline-block; }
+  .btn:hover { transform:translate(-2px,-2px); box-shadow:6px 6px 0 rgba(0,0,0,.45); }
+  .btn.vermelho { background:var(--vermelho); color:var(--creme); }
+  .btn.marinho { background:var(--marinho); color:var(--creme); }
+  .btn.creme { background:var(--creme); color:var(--marinho-esc); border-color:var(--marinho-esc); }
+
+  /* ---------- parede: objetos pendurados ---------- */
+  .parede { max-width:1120px; margin:40px auto 0; padding:0 16px; display:grid; grid-template-columns:1.25fr .9fr; gap:34px; align-items:start; }
+  @media (max-width:860px) { .parede { grid-template-columns:1fr; } }
+  .prego { width:14px; height:14px; border-radius:50%; background:radial-gradient(circle at 35% 35%, #ddd 0 20%, #777 60%, #333); margin:0 auto -4px;
+    position:relative; z-index:3; box-shadow:0 2px 2px rgba(0,0,0,.5); }
+  .fio { width:2px; height:34px; background:#2a2016; margin:0 auto; position:relative; z-index:2; }
+
+  /* tabela de preços de letras de plástico */
+  .tabela { background:#141414; border:14px solid #7a5230; border-radius:6px; padding:22px 20px 16px; box-shadow:0 14px 28px rgba(0,0,0,.55), inset 0 0 0 2px #000;
+    background-image:repeating-linear-gradient(180deg, #1a1a1a 0 6px, #0d0d0d 6px 8px); transform:rotate(-.6deg); }
+  .tabela h2 { font-family:Bloco, Impact, sans-serif; font-weight:normal; letter-spacing:.18em; text-align:center; margin:0 0 14px; font-size:30px; color:#f4f1ea; }
+  .tabela .sub { font-family:Bloco, Impact, sans-serif; letter-spacing:.14em; text-align:center; color:#e2b23a; margin:-10px 0 14px; font-size:17px; }
+  .linha { display:flex; align-items:baseline; gap:8px; font-family:Bloco, Impact, sans-serif; letter-spacing:.09em; font-size:clamp(17px, 2.3vw, 22px);
+    color:#f1eee6; margin:7px 0; text-shadow:0 1px 0 #000; }
+  .linha .pontos { flex:1; border-bottom:3px dotted rgba(241,238,230,.55); transform:translateY(-6px); min-width:20px; }
+  .linha .preco { color:#e2b23a; white-space:nowrap; }
+  .linha .torta { display:inline-block; transform:rotate(-4deg) translateY(1px); }
+  .linha.destaque .preco { color:#ff7a68; }
+
+  /* baleiro de vidro */
+  .baleiro { text-align:center; }
+  .baleiro button { background:none; border:0; padding:0; cursor:pointer; width:100%; max-width:320px; }
+  .baleiro svg { width:100%; height:auto; filter:drop-shadow(0 14px 14px rgba(0,0,0,.5)); transition:transform .2s; }
+  .baleiro button:hover svg { transform:rotate(-2deg) scale(1.02); }
+  .bala { margin:10px auto 0; max-width:340px; min-height:92px; background:var(--creme); color:var(--marinho-esc); border-radius:10px; padding:12px 16px;
+    font-size:16px; box-shadow:4px 4px 0 rgba(0,0,0,.35); position:relative; text-align:left; }
+  .bala b { color:var(--vermelho); }
+  .bala::before { content:""; position:absolute; top:-10px; left:46px; border:10px solid transparent; border-top:0; border-bottom-color:var(--creme); }
+
+  /* placa neon */
+  .neon { font-family:Letreiro, cursive; font-size:54px; color:#ffd9d4; text-align:center; margin:4px 0 14px; letter-spacing:.02em;
+    text-shadow:0 0 4px #fff, 0 0 10px var(--neon), 0 0 22px var(--neon), 0 0 40px var(--neon); animation:pisca 7s infinite; }
+  .neon small { display:block; font-family:Bloco, Impact, sans-serif; font-size:18px; letter-spacing:.3em; color:#bfefff;
+    text-shadow:0 0 4px #fff, 0 0 10px #39c6ff, 0 0 20px #39c6ff; margin-top:-6px; }
+  @keyframes pisca { 0%,18%,22%,25%,53%,57%,100% { opacity:1 } 20%,24%,55% { opacity:.35 } }
+
+  /* placa redonda de lata */
+  .lata { width:150px; height:150px; border-radius:50%; margin:28px auto 0; background:radial-gradient(circle at 40% 35%, #e04a3e, var(--vermelho) 55%, #8f241e);
+    border:7px solid var(--creme); box-shadow:0 0 0 4px var(--vermelho-esc), 0 12px 18px rgba(0,0,0,.5); display:flex; flex-direction:column; align-items:center;
+    justify-content:center; transform:rotate(8deg); font-family:Bloco, Impact, sans-serif; color:var(--creme); letter-spacing:.08em; text-align:center; line-height:1; }
+  .lata .g { font-family:Letreiro, cursive; font-size:30px; letter-spacing:0; display:block; }
+  .lata .p { font-size:13px; margin-top:6px; display:block; letter-spacing:.18em; }
+
+  /* quadro na parede (pôster do logo) */
+  .quadro { margin:0 auto; max-width:360px; padding:12px; background:#2b1a0e; border:10px solid #8a5c34; border-radius:4px;
+    box-shadow:0 12px 22px rgba(0,0,0,.55), inset 0 0 0 3px #1a0f07; transform:rotate(-3deg); }
+  .quadro img { display:block; width:100%; height:auto; filter:sepia(.18) contrast(1.02); }
+
+  /* lousa: como funciona */
+  .lousa-box { max-width:1120px; margin:56px auto 0; padding:0 16px; }
+  .lousa { background:var(--lousa); border:16px solid #8a5c34; border-radius:6px; padding:26px 24px 18px; box-shadow:0 16px 30px rgba(0,0,0,.55), inset 0 0 60px rgba(0,0,0,.45);
+    background-image:radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.07), transparent 60%), radial-gradient(ellipse at 80% 90%, rgba(255,255,255,.05), transparent 50%); }
+  .lousa h2 { font-family:Giz, cursive; font-weight:normal; color:#f4f4ee; font-size:clamp(24px, 3.4vw, 34px); margin:0 0 18px; text-align:center; opacity:.92; }
+  .ingressos { display:grid; grid-template-columns:repeat(3, 1fr); gap:18px; }
+  @media (max-width:760px) { .ingressos { grid-template-columns:1fr; } }
+  .ingresso { background:var(--creme); color:var(--marinho-esc); border-radius:8px; padding:16px 16px 14px 62px; position:relative; box-shadow:3px 3px 0 rgba(0,0,0,.35);
+    -webkit-mask:radial-gradient(circle 11px at 0 50%, transparent 98%, #000) , radial-gradient(circle 11px at 100% 50%, transparent 98%, #000);
+    -webkit-mask-composite: source-in; mask-composite: intersect; }
+  .ingresso .n { position:absolute; left:14px; top:12px; font-family:Letreiro, cursive; font-size:40px; color:var(--vermelho); line-height:1; }
+  .ingresso h3 { font-family:Bloco, Impact, sans-serif; letter-spacing:.07em; font-weight:normal; font-size:24px; margin:0 0 4px; color:var(--marinho); }
+  .ingresso p { margin:0; font-size:15.5px; }
+  .giz { font-family:Giz, cursive; color:#e9e9df; font-size:15px; text-align:center; margin:18px 0 0; opacity:.85; }
+
+  /* piso xadrez e rodapé */
+  .piso { height:110px; margin-top:60px; background-color:#efe6d2;
+    background-image:linear-gradient(45deg, #181818 25%, transparent 25%, transparent 75%, #181818 75%), linear-gradient(45deg, #181818 25%, transparent 25%, transparent 75%, #181818 75%);
+    background-size:56px 56px; background-position:0 0, 28px 28px; border-top:10px solid var(--vermelho); box-shadow:inset 0 18px 24px rgba(0,0,0,.45); }
+  footer { background:#160e08; color:#bfae8c; text-align:center; padding:22px 16px 30px; font-size:15px; }
+  footer a { color:#e8d6ae; }
+  .so-desktop { display:block } @media (max-width:860px) { .so-desktop { display:none } }
+</style>
+</head>
+<body>
+<div class="grao" aria-hidden="true"></div>
+
+<!-- teto com varal de lâmpadas e bandeirinhas -->
+<div class="teto" aria-hidden="true">
+  <svg viewBox="0 0 1200 120" preserveAspectRatio="xMidYMin slice">
+    <path d="M0,18 Q300,78 600,22 T1200,20" stroke="#1a120c" stroke-width="3" fill="none"/>
+    <path d="M0,8 Q300,60 600,12 T1200,10" stroke="#1a120c" stroke-width="2" fill="none"/>
+    <g id="bandeirinhas">
+      <polygon points="40,16 76,24 52,58" fill="#c8372d"/><polygon points="120,26 156,32 134,66" fill="#f3e6c8"/>
+      <polygon points="200,34 236,37 214,72" fill="#1e3a5f"/><polygon points="280,38 316,38 296,74" fill="#f2b33d"/>
+      <polygon points="360,37 396,35 378,72" fill="#c8372d"/><polygon points="440,32 476,28 456,66" fill="#f3e6c8"/>
+      <polygon points="520,24 556,19 534,58" fill="#1e3a5f"/><polygon points="610,14 646,14 624,50" fill="#f2b33d"/>
+      <polygon points="690,14 726,18 704,52" fill="#c8372d"/><polygon points="770,22 806,28 784,62" fill="#f3e6c8"/>
+      <polygon points="850,30 886,33 866,68" fill="#1e3a5f"/><polygon points="930,33 966,33 948,70" fill="#f2b33d"/>
+      <polygon points="1010,30 1046,27 1026,64" fill="#c8372d"/><polygon points="1090,24 1126,20 1106,56" fill="#f3e6c8"/>
+    </g>
+    <g>
+      <g class="lamp"><circle cx="80" cy="34" r="9" fill="#ffe7a8"/><circle cx="80" cy="34" r="18" fill="#ffd36b" opacity=".25"/></g>
+      <g class="lamp"><circle cx="190" cy="52" r="9" fill="#ffe7a8"/><circle cx="190" cy="52" r="18" fill="#ffd36b" opacity=".25"/></g>
+      <g class="lamp"><circle cx="300" cy="58" r="9" fill="#ffe7a8"/><circle cx="300" cy="58" r="18" fill="#ffd36b" opacity=".25"/></g>
+      <g class="lamp"><circle cx="410" cy="52" r="9" fill="#ffe7a8"/><circle cx="410" cy="52" r="18" fill="#ffd36b" opacity=".25"/></g>
+      <g class="lamp"><circle cx="520" cy="36" r="9" fill="#ffe7a8"/><circle cx="520" cy="36" r="18" fill="#ffd36b" opacity=".25"/></g>
+      <g class="lamp"><circle cx="680" cy="26" r="9" fill="#ffe7a8"/><circle cx="680" cy="26" r="18" fill="#ffd36b" opacity=".25"/></g>
+      <g class="lamp"><circle cx="790" cy="40" r="9" fill="#ffe7a8"/><circle cx="790" cy="40" r="18" fill="#ffd36b" opacity=".25"/></g>
+      <g class="lamp"><circle cx="900" cy="44" r="9" fill="#ffe7a8"/><circle cx="900" cy="44" r="18" fill="#ffd36b" opacity=".25"/></g>
+      <g class="lamp"><circle cx="1010" cy="40" r="9" fill="#ffe7a8"/><circle cx="1010" cy="40" r="18" fill="#ffd36b" opacity=".25"/></g>
+      <g class="lamp"><circle cx="1120" cy="28" r="9" fill="#ffe7a8"/><circle cx="1120" cy="28" r="18" fill="#ffd36b" opacity=".25"/></g>
+    </g>
+  </svg>
+</div>
+
+<!-- letreiro pendurado -->
+<div class="palco">
+  <div class="pendurado">
+    <span class="corrente e"></span><span class="corrente d"></span>
+    <img src="{% static 'publico/logo.png' %}?v=3" alt="Comandas Brasil" width="800" height="450">
+  </div>
+</div>
+
+<section class="chamada">
+  <h1>Comandas de bar pelo celular</h1>
+  <p>O garçom anota no próprio celular, o pedido sai impresso na cozinha e na churrasqueira,
+     e a conta fecha certinha. <b>Sem computador no balcão. Funciona até sem internet.</b></p>
+  <div class="botoes">
+    <a class="btn vermelho" href="/app/">Baixar o app</a>
+    <a class="btn marinho" href="/painel/">Painel do gerente</a>
+    <a class="btn creme" href="/c/zemaria/">Ver um cardápio de exemplo</a>
+  </div>
+</section>
+
+<!-- parede com as coisas penduradas -->
+<section class="parede">
+  <div>
+    <div class="prego"></div><div class="fio"></div>
+    <div class="tabela" role="table" aria-label="O que vem no sistema">
+      <h2>TABELA DA CASA</h2>
+      <div class="sub">★ TUDO INCLUSO ★</div>
+      <div class="linha"><span>COMANDA NO CELULAR</span><span class="pontos"></span><span class="preco">INCLUSO</span></div>
+      <div class="linha"><span>FUNCIONA SEM INTERNET</span><span class="pontos"></span><span class="preco">INCLUSO</span></div>
+      <div class="linha"><span>CUPOM NA COZINHA E NA CHURRASQUEIRA</span><span class="pontos"></span><span class="preco">INCLUSO</span></div>
+      <div class="linha"><span>CERVEJA NÃO IMPRIME À TOA</span><span class="pontos"></span><span class="preco">INCLUSO</span></div>
+      <div class="linha"><span>CONTA C/ 10% E DIVISÃO</span><span class="pontos"></span><span class="preco">INCLUSO</span></div>
+      <div class="linha"><span>CARDÁPIO NO QR CODE</span><span class="pontos"></span><span class="preco">INCLUSO</span></div>
+      <div class="linha"><span>CLIENTE CHAMA O GARÇOM</span><span class="pontos"></span><span class="preco">INCLUSO</span></div>
+      <div class="linha"><span>RELATÓRIO DO DIA E DO MÊS</span><span class="pontos"></span><span class="preco">INCLUSO</span></div>
+      <div class="linha"><span>CANCELAMENTO SÓ C/ GERENTE</span><span class="pontos"></span><span class="preco">INCLUSO</span></div>
+      <div class="linha destaque"><span>COMPUTADOR NO BAR</span><span class="pontos"></span><span class="preco"><span class="torta">NÃO PRECISA</span></span></div>
+    </div>
+    <div class="prego" style="margin-top:40px"></div><div class="fio" style="height:24px"></div>
+    <figure class="quadro" style="transform:rotate(2.5deg)"><img src="{% static 'publico/quadro.jpg' %}?v=1" alt="Pôster Comandas Brasil: gerenciador de bar, app de bar" loading="lazy" width="700" height="458"></figure>
+  </div>
+
+  <div>
+    <div class="neon" aria-label="Aberto">Aberto<small>ATÉ O ÚLTIMO CLIENTE</small></div>
+    <div class="baleiro">
+      <button id="baleiro" type="button" aria-label="Pegar uma bala (dica)">
+        <svg viewBox="0 0 300 330" aria-hidden="true">
+          <!-- tampa -->
+          <ellipse cx="150" cy="38" rx="18" ry="12" fill="#a32a22"/>
+          <rect x="70" y="42" width="160" height="30" rx="12" fill="#c8372d"/>
+          <rect x="70" y="42" width="160" height="10" rx="6" fill="#e0574a"/>
+          <rect x="82" y="70" width="136" height="14" rx="4" fill="#8e241e"/>
+          <!-- vidro -->
+          <path d="M84,84 C30,110 30,290 70,306 L230,306 C270,290 270,110 216,84 Z" fill="rgba(210,235,245,.16)" stroke="rgba(235,248,255,.65)" stroke-width="4"/>
+          <!-- balas -->
+          <g>
+            <circle cx="100" cy="270" r="17" fill="#c8372d"/><circle cx="138" cy="282" r="17" fill="#f2b33d"/><circle cx="176" cy="276" r="17" fill="#3d8bd9"/>
+            <circle cx="210" cy="268" r="16" fill="#f3e6c8"/><circle cx="82" cy="240" r="15" fill="#3fbf7f"/><circle cx="118" cy="244" r="17" fill="#e86aa8"/>
+            <circle cx="156" cy="248" r="17" fill="#c8372d"/><circle cx="194" cy="240" r="17" fill="#f2b33d"/><circle cx="224" cy="236" r="14" fill="#3fbf7f"/>
+            <circle cx="98" cy="210" r="16" fill="#f2b33d"/><circle cx="136" cy="214" r="17" fill="#3d8bd9"/><circle cx="172" cy="214" r="16" fill="#f3e6c8"/>
+            <circle cx="206" cy="208" r="16" fill="#e86aa8"/><circle cx="118" cy="182" r="15" fill="#c8372d"/><circle cx="154" cy="182" r="16" fill="#3fbf7f"/>
+            <circle cx="188" cy="180" r="15" fill="#f2b33d"/>
+            <!-- balas embrulhadas -->
+            <g transform="translate(150 150) rotate(-18)"><rect x="-20" y="-11" width="40" height="22" rx="10" fill="#f3e6c8"/><polygon points="-20,0 -32,-10 -32,10" fill="#f3e6c8"/><polygon points="20,0 32,-10 32,10" fill="#f3e6c8"/><rect x="-6" y="-11" width="5" height="22" fill="#c8372d"/><rect x="4" y="-11" width="5" height="22" fill="#c8372d"/></g>
+            <g transform="translate(96 150) rotate(24)"><rect x="-18" y="-10" width="36" height="20" rx="9" fill="#1e3a5f"/><polygon points="-18,0 -29,-9 -29,9" fill="#1e3a5f"/><polygon points="18,0 29,-9 29,9" fill="#1e3a5f"/><circle cx="0" cy="0" r="4" fill="#f2b33d"/></g>
+            <g transform="translate(206 152) rotate(-8)"><rect x="-18" y="-10" width="36" height="20" rx="9" fill="#3fbf7f"/><polygon points="-18,0 -29,-9 -29,9" fill="#3fbf7f"/><polygon points="18,0 29,-9 29,9" fill="#3fbf7f"/></g>
+          </g>
+          <!-- brilho do vidro -->
+          <path d="M70,120 C56,170 58,240 76,286" stroke="rgba(255,255,255,.45)" stroke-width="9" fill="none" stroke-linecap="round"/>
+          <path d="M236,130 C242,160 242,190 238,215" stroke="rgba(255,255,255,.25)" stroke-width="6" fill="none" stroke-linecap="round"/>
+          <!-- etiqueta -->
+          <rect x="82" y="98" width="136" height="36" rx="4" fill="#f3e6c8" stroke="#7a1c18" stroke-width="2"/>
+          <text x="150" y="123" text-anchor="middle" font-family="Bloco, Impact, sans-serif" font-size="19" letter-spacing="1" fill="#7a1c18" textLength="116" lengthAdjust="spacingAndGlyphs">DICAS · 1 BALA</text>
+        </svg>
+      </button>
+      <div class="bala" id="bala" aria-live="polite"><b>Toque no baleiro</b> e pegue uma dica de como o Comandas Brasil ajuda no seu bar.</div>
+    </div>
+    <div class="lata so-desktop" aria-hidden="true"><span class="g">Gelada</span><span class="p">DESDE 2026</span></div>
+  </div>
+</section>
+
+<!-- lousa: como funciona -->
+<section class="lousa-box">
+  <div class="prego"></div><div class="fio"></div>
+  <div class="lousa">
+    <h2>Como funciona? É simples:</h2>
+    <div class="ingressos">
+      <div class="ingresso"><span class="n">1</span><h3>CADASTRE O BAR</h3>
+        <p>Cardápio, preços, quem imprime onde (cozinha, churrasqueira) e o PIN de cada garçom. Tudo pelo navegador.</p></div>
+      <div class="ingresso"><span class="n">2</span><h3>INSTALE NOS CELULARES</h3>
+        <p>Cada garçom baixa o app no próprio Android e entra com o PIN. A impressora fica no Wi-Fi do bar.</p></div>
+      <div class="ingresso"><span class="n">3</span><h3>ATENDA E PRONTO</h3>
+        <p>Abriu a comanda, lançou o pedido, saiu o cupom. Caiu a internet? Continua funcionando.</p></div>
+    </div>
+    <p class="giz">sem papelada · sem máquina no balcão · sem complicação</p>
+  </div>
+</section>
+
+<div class="piso" aria-hidden="true"></div>
+<footer>
+  <div><b>Comandas Brasil</b> · sistema de comandas para bar pelo celular</div>
+  <div style="margin-top:6px"><a href="/app/">Baixar o app</a> · <a href="/painel/">Painel do gerente</a> · <a href="/privacidade/">Privacidade</a></div>
+</footer>
+
+<script>
+  // baleiro: cada toque solta uma "bala" com uma dica
+  var dicas = [
+    ['Caiu a internet?', 'Os celulares continuam conversando pelo Wi-Fi do bar e os pedidos seguem imprimindo.'],
+    ['Cerveja não vai para a cozinha.', 'Cada produto diz se imprime e em qual setor. Porção sai na cozinha, espetinho na churrasqueira.'],
+    ['Quem imprime?', 'O app escolhe sozinho o celular com mais bateria. Deixe um no carregador e ele vira o "líder".'],
+    ['Acabou a batata?', 'O gerente marca "esgotado" no celular e ela some do cardápio do cliente na hora.'],
+    ['Conta dividida?', 'Taxa de serviço e divisão por pessoa saem prontas no cupom da conta.'],
+    ['Cancelou um item?', 'Só com o PIN do gerente, e sai um cupom avisando a cozinha.'],
+    ['Cliente com sede?', 'Ele aponta a câmera para o QR Code da mesa, vê o cardápio e chama o garçom.'],
+    ['Fim da noite?', 'O relatório mostra o faturado, o que mais vendeu e quanto cada garçom lançou.'],
+    ['Comanda 15 duas vezes?', 'Se dois celulares abrirem o mesmo número sem se ver, o sistema avisa e trava até alguém resolver.']
+  ];
+  var i = -1, bala = document.getElementById('bala');
+  document.getElementById('baleiro').addEventListener('click', function () {
+    i = (i + 1 + Math.floor(Math.random() * (dicas.length - 1))) % dicas.length;
+    bala.innerHTML = '';
+    var b = document.createElement('b'); b.textContent = dicas[i][0] + ' ';
+    bala.appendChild(b); bala.appendChild(document.createTextNode(dicas[i][1]));
+  });
+</script>
+</body>
+</html>

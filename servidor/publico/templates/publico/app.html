@@ -1,0 +1,50 @@
+{% load static %}<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comandas Brasil · instalar o app</title>
+<style>
+  :root { --fundo:#15161a; --card:#22242b; --texto:#f2efe9; --suave:#a5a29b; --ambar:#ffb020; }
+  body { margin:0; background:var(--fundo); color:var(--texto); font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:560px; margin:auto; padding:28px 16px 60px; }
+  h1 { color:var(--ambar); margin:0 0 4px; font-size:28px; }
+  .card { background:var(--card); border-radius:14px; padding:16px; margin:16px 0; }
+  .btn { display:block; text-align:center; background:var(--ambar); color:#2a1d00; font-weight:700; font-size:19px; padding:16px;
+         border-radius:30px; text-decoration:none; }
+  ol { padding-left:20px; } li { margin-bottom:8px; } .suave { color:var(--suave); font-size:14px; }
+  img.qr { background:#fff; padding:10px; border-radius:12px; width:200px; display:block; margin:10px auto; }
+</style>
+</head>
+<body><main>
+  <img src="{% static 'publico/logo.png' %}?v=3" alt="Comandas Brasil" style="width:100%;max-width:420px;display:block;margin:0 auto 6px">
+  <div class="suave" style="text-align:center">App dos garçons · Android</div>
+  {% if app %}
+  <div class="card">
+    <a class="btn" href="/app/comandas.apk">Baixar o app (versão {{ app.versao }})</a>
+    {% if app.notas %}<p class="suave">Novidades: {{ app.notas }}</p>{% endif %}
+  </div>
+  <div class="card">
+    <b>Como instalar</b>
+    <ol>
+      <li>Toque em <b>Baixar o app</b> e espere terminar.</li>
+      <li>Abra o arquivo baixado (aparece na notificação ou em "Downloads").</li>
+      <li>Se o celular avisar que não permite instalar, toque em <b>Configurações</b> e ligue
+          <b>"Permitir desta fonte"</b> para o navegador. Volte e toque em <b>Instalar</b>.</li>
+      <li>Se aparecer o "Play Protect", toque em <b>Mais detalhes → Instalar mesmo assim</b>
+          (o app ainda não está na Play Store).</li>
+      <li>Abra o app, digite o <b>código do bar</b> e o seu <b>PIN</b> (o gerente informa).</li>
+    </ol>
+    <p class="suave">Para atualizar depois: o próprio app avisa quando houver versão nova.</p>
+  </div>
+  <div class="card" style="text-align:center">
+    <div class="suave">Para passar para outro celular, aponte a câmera:</div>
+    <img class="qr" src="/app/qr.svg" alt="QR Code">
+    <div class="suave">{{ url }}</div>
+  </div>
+  {% else %}
+  <div class="card">O app ainda não foi publicado.</div>
+  {% endif %}
+  <p class="suave"><a style="color:var(--suave)" href="/privacidade/">Política de privacidade</a></p>
+</main></body>
+</html>

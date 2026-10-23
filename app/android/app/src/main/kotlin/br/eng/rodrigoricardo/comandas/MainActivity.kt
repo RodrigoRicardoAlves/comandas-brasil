@@ -16,6 +16,7 @@ class MainActivity : FlutterActivity() {
         val cache = FlutterEngineCache.getInstance()
         cache.get(MOTOR)?.let { return it }
         val motor = FlutterEngine(context.applicationContext)
+        Sistema.ligar(this, motor) // canal pronto antes do Dart começar
         motor.dartExecutor.executeDartEntrypoint(DartExecutor.DartEntrypoint.createDefault())
         cache.put(MOTOR, motor)
         return motor

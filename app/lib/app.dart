@@ -17,6 +17,7 @@ import 'dados/modelos.dart';
 import 'impressao/cupons.dart';
 import 'impressao/impressora.dart';
 import 'rede/rede_local.dart';
+import 'segundo_plano.dart';
 import 'sistema.dart';
 import 'util.dart';
 
@@ -55,6 +56,8 @@ class App extends ChangeNotifier {
   String deviceId = '';
   String modelo = 'Android';
   String versaoApp = '';
+  int buildApp = 0;
+  String fabricante = '';
 
   // sessão
   String servidor = servidorPadrao;
@@ -77,6 +80,15 @@ class App extends ChangeNotifier {
   int? bateria;
   bool carregando = false;
   String impressoraLocal = ''; // substitui a impressora do bar neste celular (testes)
+  Map<String, dynamic>? atualizacao; // versão nova do app disponível para baixar
+  int _ultimaChecagemVersao = 0;
+
+  /// Erro de impressora do bar: o deste celular ou o que o líder informou (só ele imprime).
+  String? get erroImpressoraBar {
+    if (erroImpressora != null) return erroImpressora;
+    final l = rede.parLider;
+    return (!rede.souLider && l != null && l.vivo(agoraMs())) ? l.erroImpressora : null;
+  }
 
   int _ultimoSeq = 0;
   Timer? _timer;
@@ -90,13 +102,20 @@ class App extends ChangeNotifier {
     await banco.abrir();
     deviceId = await banco.ler('device_id') ?? '';
     if (deviceId.isEmpty) {
-      deviceId = _uuid.v4();
+      // usa o identificador do Android (sobrevive a reinstalar o app); sem ele, um aleatório
+      final android = await Sistema.idAparelho();
+      deviceId = android != null && android.length >= 8
+          ? 'a-${sha256.convert(utf8.encode('comandas:$android')).toString().substring(0, 32)}'
+          : _uuid.v4();
       await banco.gravar('device_id', deviceId);
     }
     try {
       final info = await DeviceInfoPlugin().androidInfo;
       modelo = '${info.manufacturer} ${info.model}'.trim();
-      versaoApp = (await PackageInfo.fromPlatform()).version;
+      fabricante = info.manufacturer.toLowerCase();
+      final pk = await PackageInfo.fromPlatform();
+      versaoApp = pk.version;
+      buildApp = int.tryParse(pk.buildNumber) ?? 0;
     } catch (_) {}
     servidor = await banco.ler('servidor') ?? servidorPadrao;
     impressoraLocal = await banco.ler('impressora_local') ?? '';
@@ -112,6 +131,7 @@ class App extends ChangeNotifier {
     if (usuario == null && api.token != null) await trocarUsuario();
     await _recalcular();
     Sistema.iniciar();
+    unawaited(agendarSegundoPlano());
     if (logado) unawaited(rede.iniciar());
     _timer = Timer.periodic(const Duration(seconds: 4), (_) => ciclo());
     unawaited(ciclo());
@@ -524,6 +544,30 @@ class App extends ChangeNotifier {
     }
   }
 
+  /// Gerente marca produto esgotado (precisa de internet; os outros celulares recebem em segundos).
+  Future<void> marcarEsgotado(int produtoId, bool esgotado) async {
+    if (usuario?.gerente != true) throw ErroApp('Só o gerente pode mudar o cardápio');
+    if (api.token == null) throw ErroApp('Precisa de internet para mudar o cardápio');
+    try {
+      await api.post('/produtos/$produtoId/esgotado', {'esgotado': esgotado});
+    } on ErroApi catch (e) {
+      throw ErroApp(e.msg);
+    } catch (_) {
+      throw ErroApp('Sem internet agora. Tente de novo em instantes.');
+    }
+    await atualizarCardapio();
+  }
+
+  /// Procura versão nova do app (APK direto) no servidor, no máximo a cada 10 minutos.
+  Future<void> _checarVersao() async {
+    if (agoraMs() - _ultimaChecagemVersao < 600000) return;
+    _ultimaChecagemVersao = agoraMs();
+    try {
+      final v = await Api(servidor).get('/app');
+      atualizacao = ((v['build'] ?? 0) as int) > buildApp && v['url'] != null ? v : null;
+    } catch (_) {}
+  }
+
   int get cuponsNaoImpressos => estado.cuponsPendentes(meu: _imprimoEste).length;
 
   Future<void> reimprimirPedido(PedidoC p) async {
@@ -584,6 +628,7 @@ class App extends ChangeNotifier {
     _ciclando = true;
     try {
       await lerBateria();
+      await banco.gravar('app_vivo_em', '${agoraMs()}'); // a tarefa de segundo plano não precisa agir
       // entrou sem internet: confirma agora no servidor
       final pin = _pinPendente;
       if (pin != null && usuario != null) {
@@ -649,6 +694,7 @@ class App extends ChangeNotifier {
         naFila = await banco.contarPendentes();
       }
       unawaited(_imprimirChamados());
+      unawaited(_checarVersao());
     } on ErroApi catch (e) {
       if (e.status == 401) {
         // sessão encerrada no servidor: gerente desconectou o celular ou o garçom entrou em outro
