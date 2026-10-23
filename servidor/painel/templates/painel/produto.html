@@ -1,0 +1,30 @@
+{% extends "painel/base.html" %}
+{% block titulo %}Produto{% endblock %}
+{% block conteudo %}
+<h1>{% if obj.pk %}{{ obj.nome }}{% else %}Novo produto{% endif %}</h1>
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+<div class="card">
+  {{ form.as_p }}
+  <p class="suave">"Imprime cupom": quando pedido, sai um cupom no setor escolhido (ex.: porções na Cozinha). Bebidas normalmente não imprimem.</p>
+</div>
+<div class="card">
+  <h2 style="margin-top:0">Preços</h2>
+  <p class="suave">Um produto pode ter vários tamanhos (600ml, Lata, Meia...). Para preço único, deixe o tamanho vazio.</p>
+  {{ variantes.management_form }}
+  {{ variantes.non_form_errors }}
+  <div class="tabela"><table>
+    <tr><th>Tamanho/tipo</th><th>Preço (R$)</th><th>Ordem</th><th>Apagar</th></tr>
+    {% for f in variantes %}
+    <tr><td>{{ f.id }}{{ f.nome }}{{ f.nome.errors }}</td><td>{{ f.preco }}{{ f.preco.errors }}</td>
+        <td style="width:90px">{{ f.ordem }}</td><td>{% if f.instance.pk %}{{ f.DELETE }}{% endif %}</td></tr>
+    {% endfor %}
+  </table></div>
+</div>
+<div class="linha">
+  <button class="btn prim" type="submit">Salvar</button>
+  <a class="btn" href="{% url 'painel:cardapio' %}">Voltar</a>
+  <span class="esp"></span>
+  {% if obj.pk %}<button class="btn perigo" type="submit" name="apagar" value="1" onclick="return confirm('Apagar {{ obj.nome }}?')">Apagar produto</button>{% endif %}
+</div>
+</form>
+{% endblock %}

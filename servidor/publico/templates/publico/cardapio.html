@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{ bar.nome }} · Cardápio</title>
+<meta name="theme-color" content="#15161a">
+<style>
+  :root { --fundo:#15161a; --card:#22242b; --texto:#f2efe9; --suave:#a5a29b; --ambar:#ffb020; --verde:#3ddc84; --vermelho:#ff5a5f; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--fundo); color:var(--texto); font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; padding-bottom:110px; }
+  header { padding:22px 16px 6px; max-width:720px; margin:auto; }
+  h1 { margin:0; font-size:26px; color:var(--ambar); }
+  .sub { color:var(--suave); font-size:14px; }
+  nav { position:sticky; top:0; z-index:5; background:rgba(21,22,26,.96); backdrop-filter:blur(6px); border-bottom:1px solid #2c2e36; }
+  nav div { display:flex; gap:6px; overflow-x:auto; padding:10px 16px; max-width:720px; margin:auto; scrollbar-width:none; }
+  nav a { flex:none; color:var(--texto); text-decoration:none; padding:7px 14px; border-radius:20px; background:var(--card); font-size:14px; }
+  main { max-width:720px; margin:auto; padding:0 16px; }
+  h2 { font-size:19px; margin:26px 0 10px; scroll-margin-top:60px; }
+  .p { display:flex; gap:12px; background:var(--card); border-radius:14px; padding:12px; margin-bottom:10px; }
+  .p img { width:84px; height:84px; object-fit:cover; border-radius:10px; flex:none; }
+  .p .n { font-weight:600; font-size:17px; }
+  .p .d { color:var(--suave); font-size:14px; margin:2px 0 6px; }
+  .precos { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:15px; }
+  .precos b { color:var(--ambar); font-weight:600; }
+  .chamar { position:fixed; left:0; right:0; bottom:0; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:linear-gradient(transparent, var(--fundo) 30%); }
+  .chamar button, .folha button.prim { width:100%; max-width:688px; display:block; margin:auto; font:600 18px system-ui,sans-serif; padding:15px; border:0; border-radius:30px;
+    background:var(--ambar); color:#2a1d00; cursor:pointer; }
+  .chamar button:disabled { background:#3a3c44; color:var(--suave); }
+  .fundo-folha { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; z-index:10; }
+  .folha { position:fixed; left:0; right:0; bottom:0; background:#24262d; border-radius:20px 20px 0 0; padding:20px 16px calc(20px + env(safe-area-inset-bottom));
+    max-width:720px; margin:auto; z-index:11; display:none; }
+  .folha h3 { margin:0 0 12px; font-size:20px; }
+  .folha input { width:100%; font-size:20px; padding:12px; border-radius:12px; border:1px solid #444; background:#15161a; color:var(--texto); margin-bottom:12px; }
+  .motivos { display:grid; gap:8px; margin-bottom:14px; }
+  .motivos label { display:flex; align-items:center; gap:10px; background:#15161a; border:1px solid #3a3c44; border-radius:12px; padding:12px; font-size:16px; }
+  .motivos input { width:auto; margin:0; accent-color:var(--ambar); }
+  .aviso { padding:12px; border-radius:12px; margin-bottom:12px; font-size:15px; }
+  .aviso.erro { background:rgba(255,90,95,.15); color:var(--vermelho); }
+  .aviso.ok { background:rgba(61,220,132,.13); color:var(--verde); }
+  .cancelar { background:none; border:0; color:var(--suave); width:100%; padding:12px; font-size:16px; }
+  .vazio { color:var(--suave); text-align:center; padding:40px 0; }
+</style>
+</head>
+<body>
+<header>
+  <h1>{{ bar.nome }}</h1>
+  <div class="sub">Cardápio · preços em R$</div>
+</header>
+{% if categorias %}
+<nav><div>{% for c in categorias %}<a href="#c{{ c.id }}">{{ c.nome }}</a>{% endfor %}</div></nav>
+{% endif %}
+<main>
+  {% for c in categorias %}
+  <h2 id="c{{ c.id }}">{{ c.nome }}</h2>
+  {% for p in c.produtos %}
+  <div class="p">
+    {% if p.foto %}<img src="{{ p.foto }}" alt="" loading="lazy">{% endif %}
+    <div>
+      <div class="n">{{ p.nome }}</div>
+      {% if p.descricao %}<div class="d">{{ p.descricao }}</div>{% endif %}
+      <div class="precos">{% for v in p.variantes %}<span>{% if v.nome %}{{ v.nome }} {% endif %}<b data-c="{{ v.preco }}"></b></span>{% endfor %}</div>
+    </div>
+  </div>
+  {% endfor %}
+  {% empty %}<p class="vazio">Cardápio em preparação.</p>{% endfor %}
+</main>
+
+<div class="chamar"><button id="abrir">🔔 Chamar o garçom</button></div>
+<div class="fundo-folha" id="fundo"></div>
+<div class="folha" id="folha">
+  <h3>Chamar o garçom</h3>
+  <div id="msg"></div>
+  <form id="form">
+    {% csrf_token %}
+    <input name="quem" id="quem" placeholder="Nº da comanda ou mesa/nome" autocomplete="off" maxlength="40" required>
+    <div class="motivos">
+      {% for v, t in motivos %}<label><input type="radio" name="motivo" value="{{ v }}" {% if forloop.first %}checked{% endif %}> {{ t }}</label>{% endfor %}
+    </div>
+    <button class="prim" id="enviar" type="submit">Chamar</button>
+  </form>
+  <button class="cancelar" id="fechar" type="button">Fechar</button>
+</div>
+
+<script>
+  // preços: centavos -> "12,50"
+  document.querySelectorAll('[data-c]').forEach(function (e) {
+    e.textContent = (Number(e.dataset.c) / 100).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+  });
+  var online = {{ online|yesno:"true,false" }};
+  var folha = document.getElementById('folha'), fundo = document.getElementById('fundo'), msg = document.getElementById('msg');
+  var form = document.getElementById('form'), enviar = document.getElementById('enviar');
+  function aviso(t, tipo) { msg.innerHTML = t ? '<div class="aviso ' + tipo + '"></div>' : ''; if (t) msg.firstChild.textContent = t; }
+  function abrir() {
+    folha.style.display = fundo.style.display = 'block';
+    form.style.display = 'block';
+    aviso(online ? '' : 'O bar está sem internet agora. Por favor, chame o garçom pessoalmente.', 'erro');
+    try { var q = localStorage.getItem('quem'); if (q) document.getElementById('quem').value = q; } catch (e) {}
+  }
+  function fechar() { folha.style.display = fundo.style.display = 'none'; }
+  document.getElementById('abrir').onclick = abrir;
+  document.getElementById('fechar').onclick = fechar;
+  fundo.onclick = fechar;
+  var espera;
+  form.onsubmit = function (ev) {
+    ev.preventDefault();
+    enviar.disabled = true;
+    try { localStorage.setItem('quem', document.getElementById('quem').value); } catch (e) {}
+    fetch('chamar', {method: 'POST', body: new FormData(form)})
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        enviar.disabled = false;
+        if (j.erro) { aviso(j.erro, 'erro'); return; }
+        form.style.display = 'none';
+        aviso('Pronto! O garçom foi avisado.', 'ok');
+        clearInterval(espera);
+        espera = setInterval(function () {
+          fetch('chamado/' + j.id).then(function (r) { return r.json(); }).then(function (s) {
+            if (s.atendido) { aviso('O garçom já está vindo. 👍', 'ok'); clearInterval(espera); }
+          }).catch(function () {});
+        }, 5000);
+      })
+      .catch(function () { enviar.disabled = false; aviso('Não foi possível enviar. Chame o garçom pessoalmente.', 'erro'); });
+  };
+</script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{% extends "painel/base.html" %}{% load painel %}
+{% block titulo %}Cardápio{% endblock %}
+{% block conteudo %}
+<div class="linha"><h1 class="esp">Cardápio</h1>
+  <a class="btn" href="{% url 'painel:categoria_nova' %}">+ Categoria</a>
+  <a class="btn prim" href="{% url 'painel:produto_novo' %}">+ Produto</a></div>
+{% if not setores %}<div class="msg error">Crie pelo menos um <a href="{% url 'painel:setores' %}">setor de impressão</a> (ex.: Cozinha) para os produtos que imprimem.</div>{% endif %}
+<p class="suave">Mudanças chegam aos celulares em poucos segundos (quando houver internet). Esgotado some do cardápio dos clientes e aparece apagado no app (não deixa lançar).</p>
+{% for c in categorias %}
+<h2><a href="{% url 'painel:categoria' c.pk %}">{{ c.nome }}</a> {% if not c.ativa %}<span class="tag">oculta</span>{% endif %}
+  <a class="btn peq" href="{% url 'painel:produto_novo' %}?categoria={{ c.pk }}">+ produto</a></h2>
+<div class="tabela"><table>
+  {% for p in c.produtos.all %}
+  <tr id="p{{ p.pk }}">
+    <td><a href="{% url 'painel:produto' p.pk %}"><b>{{ p.nome }}</b></a>
+      {% if not p.ativo %}<span class="tag">inativo</span>{% endif %}
+      {% if p.esgotado %}<span class="tag vermelha">esgotado</span>{% endif %}
+      {% if p.descricao %}<div class="suave">{{ p.descricao }}</div>{% endif %}</td>
+    <td>{% for v in p.variantes.all %}<div>{% if v.nome %}{{ v.nome }} {% endif %}<b>{{ v.preco_centavos|reais }}</b></div>{% empty %}<span class="tag vermelha">sem preço</span>{% endfor %}</td>
+    <td>{% if p.imprime %}<span class="tag ambar">🖨 {{ p.setor.nome }}</span>{% else %}<span class="suave">não imprime</span>{% endif %}</td>
+    <td class="v"><form method="post" action="{% url 'painel:esgotado' p.pk %}">{% csrf_token %}
+      <button class="btn peq">{% if p.esgotado %}Voltou{% else %}Esgotou{% endif %}</button></form></td>
+  </tr>
+  {% empty %}<tr><td class="suave">Nenhum produto.</td></tr>{% endfor %}
+</table></div>
+{% empty %}<p>Comece criando uma categoria (ex.: Cervejas, Porções).</p>{% endfor %}
+{% endblock %}

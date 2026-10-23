@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'cardapio',
     'comandas',
     'publico',
+    'painel',
 ]
 
 MIDDLEWARE = [
@@ -94,6 +95,9 @@ MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# endereço público (vai no QR Code do cardápio)
+SITE_URL = env('SITE_URL', 'https://bar.rodrigoricardo.eng.br').rstrip('/')
 
 # o "dia de expediente" vai das 06:00 às 05:59 do dia seguinte
 INICIO_EXPEDIENTE = 6

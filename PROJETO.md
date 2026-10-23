@@ -382,3 +382,18 @@ Cada etapa termina com algo testável.
   - Celular que encerra o turno avisa os outros (`saindo`), para não aparecer como "sumiu".
   - Android não deixa ligar o serviço do líder com o app atrás da tela bloqueada; o app tenta de novo
     a cada 2 s e liga assim que volta à frente. Resolver de vez na etapa 7 (tirar da otimização de bateria).
+- 2026-10-22: etapa 6 entregue (e a parte "painel" que faltava da etapa 2):
+  - Painel do gerente em `/painel/` (Django templates, sem build): entra com código do bar + PIN de
+    gerente (sessão; 10 tentativas/5 min por IP). Telas: Agora (abertas, faturado do dia, celulares,
+    líder, chamados, pedidos atrasados), Relatórios (período por dia de expediente, por dia/categoria/
+    produto/garçom, cancelamentos, fechamentos forçados, planilha CSV, imprimir), detalhe da comanda,
+    Cardápio (categorias, produtos com vários preços, foto, esgotado com um toque), Setores, Equipe
+    (PIN único no bar; o gerente não tira o próprio acesso), Celulares (desconectar), QR Code
+    (4 cartões para imprimir, SVG), Configurações do bar. `/` redireciona para `/painel/`.
+  - Cardápio público em `/c/<código>/` (escuro, para celular). "Chamar o garçom" (comanda ou mesa/nome +
+    motivo) só aceita se há um líder online na VPS (presença nos últimos 30 s); senão pede para chamar
+    pessoalmente. Limite por IP (1 a cada 20 s, 6 a cada 10 min); chamada repetida reaproveita a aberta.
+    A página acompanha o chamado e mostra "o garçom já está vindo" quando ele toca em Atendido.
+  - Testado de ponta a ponta: cliente chamou pela página no Samsung → cupom "GARÇOM!" saiu pelo líder
+    (Xiaomi) → aviso no app → Atendido → página do cliente atualizou.
+  - `SITE_URL` no .env define o endereço do QR (padrão https://bar.rodrigoricardo.eng.br).

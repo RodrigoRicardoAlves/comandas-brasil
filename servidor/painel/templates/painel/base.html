@@ -1,0 +1,78 @@
+{% load painel %}<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block titulo %}Painel{% endblock %} · {{ request.bar.nome|default:"Comandas" }}</title>
+<style>
+  :root { --fundo:#f6f5f2; --card:#fff; --texto:#1d1d1f; --suave:#6b6b70; --linha:#e3e1dc; --ambar:#c27c00; --ambar-claro:#fff4dc;
+          --verde:#1f8a4c; --vermelho:#c0392b; --azul:#2563a8; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--fundo); color:var(--texto); }
+  a { color:var(--azul); text-decoration:none; } a:hover { text-decoration:underline; }
+  header { background:#1c1d22; color:#fff; }
+  header .barra { max-width:1100px; margin:auto; display:flex; align-items:center; gap:18px; padding:10px 16px; flex-wrap:wrap; }
+  header .bar { font-weight:700; color:#ffb020; font-size:17px; }
+  header nav { display:flex; gap:4px; flex-wrap:wrap; flex:1; }
+  header nav a { color:#ddd; padding:6px 10px; border-radius:8px; }
+  header nav a.ativo, header nav a:hover { background:#33353d; color:#fff; text-decoration:none; }
+  header .sair { color:#aaa; font-size:13px; }
+  main { max-width:1100px; margin:auto; padding:18px 16px 60px; }
+  h1 { font-size:22px; margin:4px 0 16px; } h2 { font-size:17px; margin:22px 0 10px; }
+  .card { background:var(--card); border:1px solid var(--linha); border-radius:12px; padding:14px 16px; margin-bottom:14px; }
+  .grade { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:14px; }
+  .num { font-size:26px; font-weight:700; } .rot { color:var(--suave); font-size:13px; }
+  table { width:100%; border-collapse:collapse; background:var(--card); }
+  th, td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--linha); vertical-align:top; }
+  th { font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--suave); font-weight:600; }
+  td.v, th.v { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .tabela { overflow-x:auto; border:1px solid var(--linha); border-radius:12px; margin-bottom:14px; }
+  .tabela table { border:0; }
+  .btn { display:inline-block; border:1px solid var(--linha); background:#fff; color:var(--texto); padding:8px 14px; border-radius:9px;
+         font:inherit; cursor:pointer; text-decoration:none !important; }
+  .btn.prim { background:var(--ambar); border-color:var(--ambar); color:#fff; font-weight:600; }
+  .btn.perigo { color:var(--vermelho); border-color:#e8b4ae; }
+  .btn.peq { padding:3px 9px; font-size:13px; }
+  .tag { display:inline-block; font-size:12px; padding:1px 8px; border-radius:20px; background:#eee; color:#444; }
+  .tag.verde { background:#dcf3e5; color:var(--verde); } .tag.vermelha { background:#fbe1de; color:var(--vermelho); }
+  .tag.ambar { background:var(--ambar-claro); color:var(--ambar); }
+  .msg { padding:10px 14px; border-radius:10px; margin-bottom:12px; background:#dcf3e5; color:#145c33; }
+  .msg.error { background:#fbe1de; color:#8a2318; }
+  .suave { color:var(--suave); }
+  form p { margin:0 0 12px; } label { display:block; font-weight:600; margin-bottom:3px; }
+  input[type=text], input[type=number], input[type=password], input[type=date], input:not([type]), select, textarea {
+    font:inherit; padding:8px 10px; border:1px solid #cfccc5; border-radius:8px; width:100%; max-width:420px; background:#fff; }
+  input[type=checkbox] { width:18px; height:18px; vertical-align:middle; }
+  .helptext { display:block; color:var(--suave); font-size:13px; font-weight:normal; }
+  .errorlist { color:var(--vermelho); margin:4px 0; padding-left:18px; }
+  .linha { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .esp { flex:1; }
+  @media print { header, .nao-imprimir { display:none !important; } body { background:#fff; } main { padding:0; } }
+</style>
+{% block cabeca %}{% endblock %}
+</head>
+<body>
+{% if request.gerente %}
+<header><div class="barra">
+  <span class="bar">{{ request.bar.nome }}</span>
+  <nav>
+    {% with u=request.resolver_match.url_name %}
+    <a href="{% url 'painel:inicio' %}" class="{% if u == 'inicio' %}ativo{% endif %}">Agora</a>
+    <a href="{% url 'painel:relatorio' %}" class="{% if u == 'relatorio' or u == 'comanda' %}ativo{% endif %}">Relatórios</a>
+    <a href="{% url 'painel:cardapio' %}" class="{% if 'cardapio' in request.path %}ativo{% endif %}">Cardápio</a>
+    <a href="{% url 'painel:setores' %}" class="{% if 'setores' in request.path %}ativo{% endif %}">Setores</a>
+    <a href="{% url 'painel:equipe' %}" class="{% if 'equipe' in request.path %}ativo{% endif %}">Equipe</a>
+    <a href="{% url 'painel:aparelhos' %}" class="{% if u == 'aparelhos' %}ativo{% endif %}">Celulares</a>
+    <a href="{% url 'painel:qr' %}" class="{% if u == 'qr' %}ativo{% endif %}">QR Code</a>
+    <a href="{% url 'painel:config' %}" class="{% if u == 'config' %}ativo{% endif %}">Configurações</a>
+    {% endwith %}
+  </nav>
+  <a class="sair" href="{% url 'painel:sair' %}">{{ request.gerente.nome }} · sair</a>
+</div></header>
+{% endif %}
+<main>
+  {% for m in messages %}<div class="msg {{ m.tags }}">{{ m }}</div>{% endfor %}
+  {% block conteudo %}{% endblock %}
+</main>
+</body>
+</html>

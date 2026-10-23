@@ -1,0 +1,11 @@
+{% extends "painel/base.html" %}
+{% block titulo %}Equipe{% endblock %}
+{% block conteudo %}
+<div class="linha"><h1 class="esp">Equipe</h1><a class="btn prim" href="{% url 'painel:usuario_novo' %}">+ Pessoa</a></div>
+<p class="suave">Cada pessoa entra no app com o próprio PIN. Gerentes autorizam cancelamentos e entram neste painel.</p>
+<div class="tabela"><table>
+  <tr><th>Nome</th><th>Papel</th><th>Situação</th></tr>
+  {% for u in usuarios %}<tr><td><a href="{% url 'painel:usuario' u.pk %}"><b>{{ u.nome }}</b></a></td><td>{{ u.get_papel_display }}</td>
+  <td>{% if u.ativo %}<span class="tag verde">ativo</span>{% else %}<span class="tag">desligado</span>{% endif %}</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

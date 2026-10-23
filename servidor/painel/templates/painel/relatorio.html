@@ -1,0 +1,57 @@
+{% extends "painel/base.html" %}{% load painel %}
+{% block titulo %}Relatório{% endblock %}
+{% block conteudo %}
+<h1>Relatório {% if r.de == r.ate %}de {{ r.de|date:"d/m/Y" }}{% else %}de {{ r.de|date:"d/m" }} a {{ r.ate|date:"d/m/Y" }}{% endif %}</h1>
+<div class="card nao-imprimir">
+  <form method="get" class="linha">
+    {{ form.de.label_tag }}{{ form.de }} {{ form.ate.label_tag }}{{ form.ate }}
+    <button class="btn prim">Ver</button>
+    <a class="btn" href="?">Hoje</a><a class="btn" href="?p=ontem">Ontem</a><a class="btn" href="?p=7">7 dias</a><a class="btn" href="?p=mes">Este mês</a>
+    <span class="esp"></span>
+    <a class="btn" href="?{{ query }}&formato=csv">Baixar planilha</a>
+    <button class="btn" type="button" onclick="print()">Imprimir</button>
+  </form>
+  <div class="suave" style="margin-top:6px">Cada dia vai das 06:00 às 05:59 do dia seguinte. Contam as comandas fechadas no período.</div>
+</div>
+<div class="grade">
+  <div class="card"><div class="rot">Faturado</div><div class="num">{{ r.faturado|reais }}</div></div>
+  <div class="card"><div class="rot">Comandas fechadas</div><div class="num">{{ r.n }}</div></div>
+  <div class="card"><div class="rot">Ticket médio</div><div class="num">{{ r.ticket|reais }}</div></div>
+  <div class="card"><div class="rot">Taxa de serviço</div><div class="num">{{ r.servico|reais }}</div><div class="rot">consumo {{ r.consumo|reais }}</div></div>
+</div>
+{% if r.por_dia|length > 1 %}
+<h2>Por dia</h2>
+<div class="tabela"><table><tr><th>Dia</th><th class="v">Comandas</th><th class="v">Faturado</th></tr>
+  {% for d, x in r.por_dia %}<tr><td>{{ d|date:"D d/m" }}</td><td class="v">{{ x.0 }}</td><td class="v">{{ x.1|reais }}</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+<h2>Por categoria</h2>
+<div class="tabela"><table><tr><th>Categoria</th><th class="v">Qtd</th><th class="v">Valor</th></tr>
+  {% for x in r.por_categoria %}<tr><td>{{ x.categoria|default:"—" }}</td><td class="v">{{ x.quantidade }}</td><td class="v">{{ x.valor|reais }}</td></tr>
+  {% empty %}<tr><td class="suave">Nada vendido no período.</td></tr>{% endfor %}
+</table></div>
+<h2>Por produto</h2>
+<div class="tabela"><table><tr><th>Produto</th><th class="v">Qtd</th><th class="v">Valor</th></tr>
+  {% for x in r.por_produto %}<tr><td>{{ x.produto }} {{ x.variante }} <span class="suave">· {{ x.categoria }}</span></td><td class="v">{{ x.quantidade }}</td><td class="v">{{ x.valor|reais }}</td></tr>
+  {% empty %}<tr><td class="suave">—</td></tr>{% endfor %}
+</table></div>
+<h2>Por garçom (itens lançados)</h2>
+<div class="tabela"><table><tr><th>Garçom</th><th class="v">Itens</th><th class="v">Valor</th></tr>
+  {% for x in r.por_garcom %}<tr><td>{{ x.pedido__garcom }}</td><td class="v">{{ x.quantidade }}</td><td class="v">{{ x.valor|reais }}</td></tr>
+  {% empty %}<tr><td class="suave">—</td></tr>{% endfor %}
+</table></div>
+{% if r.cancelados or r.forcadas or r.descartados %}
+<h2>Atenção</h2>
+<div class="tabela"><table>
+  {% for i in r.cancelados %}<tr><td>Cancelado</td><td>{{ i.qtd }}x {{ i.produto }} {{ i.variante }} · comanda <a href="{% url 'painel:comanda' i.comanda.pk %}">{{ i.comanda.numero }}</a></td><td>{{ i.cancelado_por }}</td><td class="v">{{ i.total|reais }}</td></tr>{% endfor %}
+  {% for c in r.forcadas %}<tr><td>Fechamento forçado</td><td>comanda <a href="{% url 'painel:comanda' c.pk %}">{{ c.numero }}</a> ({{ c.nome }})</td><td>{{ c.fechada_por }}</td><td class="v">{{ c.total_centavos|reais }}</td></tr>{% endfor %}
+  {% if r.descartados %}<tr><td>Pedidos atrasados descartados</td><td colspan="3">{{ r.descartados }}</td></tr>{% endif %}
+</table></div>
+{% endif %}
+<h2>Comandas</h2>
+<div class="tabela"><table><tr><th>Nº</th><th>Nome</th><th>Fechada</th><th>Por</th><th class="v">Total</th></tr>
+  {% for c in r.comandas %}<tr><td><a href="{% url 'painel:comanda' c.pk %}"><b>{{ c.numero }}</b></a></td><td>{{ c.nome }}</td>
+  <td>{{ c.fechada_em|date:"d/m H:i" }}</td><td>{{ c.fechada_por }}</td><td class="v">{{ c.total_centavos|reais }}</td></tr>
+  {% empty %}<tr><td class="suave">Nenhuma comanda fechada no período.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

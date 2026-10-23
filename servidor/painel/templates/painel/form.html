@@ -1,0 +1,17 @@
+{% extends "painel/base.html" %}
+{% block titulo %}{{ titulo }}{% endblock %}
+{% block conteudo %}
+<h1>{{ titulo }}</h1>
+{% if ajuda %}<p class="suave">{{ ajuda }}</p>{% endif %}
+<div class="card">
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  {{ form.as_p }}
+  <div class="linha">
+    <button class="btn prim" type="submit">Salvar</button>
+    {% if voltar %}<a class="btn" href="{{ voltar }}">Voltar</a>{% endif %}
+    <span class="esp"></span>
+    {% if pode_apagar %}<button class="btn perigo" type="submit" name="apagar" value="1" onclick="return confirm('Apagar?')">Apagar</button>{% endif %}
+  </div>
+</form>
+</div>
+{% endblock %}

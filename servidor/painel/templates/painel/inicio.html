@@ -1,0 +1,49 @@
+{% extends "painel/base.html" %}{% load painel %}
+{% block titulo %}Agora{% endblock %}
+{% block cabeca %}<meta http-equiv="refresh" content="30">{% endblock %}
+{% block conteudo %}
+<h1>Agora no bar</h1>
+{% if pendentes %}
+<div class="card" style="border-color:#e8b4ae;background:#fff6f5">
+  <b style="color:var(--vermelho)">{{ pendentes|length }} pedido(s) atrasado(s)</b> chegaram depois de a comanda ser fechada.
+  Decida no app (aviso vermelho na tela inicial):
+  {% for p in pendentes %}<div>· Comanda {{ p.comanda.numero }} ({{ p.comanda.nome }}), pedido de {{ p.garcom }} às {{ p.feito_em|time:"H:i" }}</div>{% endfor %}
+</div>
+{% endif %}
+<div class="grade">
+  <div class="card"><div class="rot">Comandas abertas</div><div class="num">{{ abertas|length }}</div><div class="rot">{{ em_aberto|reais }} em consumo</div></div>
+  <div class="card"><div class="rot">Fechadas hoje</div><div class="num">{{ fechadas_hoje }}</div><div class="rot">desde as 06:00</div></div>
+  <div class="card"><div class="rot">Faturado hoje</div><div class="num">{{ faturado_hoje|reais }}</div><div class="rot"><a href="{% url 'painel:relatorio' %}">ver relatório</a></div></div>
+  <div class="card"><div class="rot">Celulares com internet</div><div class="num">{{ aparelhos|length }}</div>
+    <div class="rot">{% for a in aparelhos %}{% if a.lider %}🖨 líder: {{ a.usuario.nome }}{% endif %}{% empty %}nenhum agora{% endfor %}</div></div>
+</div>
+
+{% if chamados %}
+<h2>Chamados do cardápio (QR)</h2>
+<div class="tabela"><table>
+  {% for ch in chamados %}<tr><td>{{ ch.criado_em|time:"H:i" }}</td><td><b>{{ ch.quem }}</b></td><td>{{ ch.get_motivo_display }}</td>
+  <td>{% if ch.impresso %}<span class="tag verde">impresso</span>{% else %}<span class="tag ambar">aguardando</span>{% endif %}</td></tr>{% endfor %}
+</table></div>
+{% endif %}
+
+<h2>Comandas abertas</h2>
+{% if abertas %}
+<div class="tabela"><table>
+  <tr><th>Nº</th><th>Nome</th><th>Aberta</th><th>Por</th></tr>
+  {% for c in abertas %}<tr><td><a href="{% url 'painel:comanda' c.pk %}"><b>{{ c.numero }}</b></a></td><td>{{ c.nome }}</td>
+  <td>{{ c.aberta_em|time:"H:i" }}</td><td>{{ c.aberta_por }}</td></tr>{% endfor %}
+</table></div>
+{% else %}<p class="suave">Nenhuma comanda aberta. (Comandas lançadas sem internet aparecem aqui quando algum celular conectar.)</p>{% endif %}
+
+<h2>Celulares com internet agora</h2>
+{% if aparelhos %}
+<div class="tabela"><table>
+  <tr><th>Garçom</th><th>Celular</th><th>Bateria</th><th>Situação</th></tr>
+  {% for a in aparelhos %}<tr><td>{{ a.usuario.nome }}</td><td>{{ a.modelo }}</td>
+  <td>{{ a.bateria|default:"?" }}%{% if a.carregando %} ⚡{% endif %}</td>
+  <td>{% if a.lider %}<span class="tag ambar">líder (imprime)</span>{% endif %}
+      {% if a.pendentes %}<span class="tag vermelha">{{ a.pendentes }} na fila</span>{% endif %}</td></tr>{% endfor %}
+</table></div>
+{% else %}<p class="suave">Nenhum celular conectado à internet. O bar pode estar funcionando só na rede local.</p>{% endif %}
+<p class="suave">Cardápio dos clientes: <a href="{{ url_cardapio }}" target="_blank">{{ url_cardapio }}</a> · esta página atualiza a cada 30 s.</p>
+{% endblock %}

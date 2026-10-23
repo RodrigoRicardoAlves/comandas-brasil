@@ -1,0 +1,22 @@
+{% extends "painel/base.html" %}{% load painel %}
+{% block titulo %}Comanda {{ c.numero }}{% endblock %}
+{% block conteudo %}
+<h1>Comanda {{ c.numero }} · {{ c.nome }}</h1>
+<div class="card">
+  Aberta {{ c.aberta_em|date:"d/m H:i" }} por {{ c.aberta_por }}.
+  {% if c.fechada_em %}Fechada {{ c.fechada_em|date:"d/m H:i" }} por {{ c.fechada_por }} · <b>{{ c.total_centavos|reais }}</b>
+    {% if c.taxa_servico %}(com {{ c.taxa_servico }}% de serviço){% endif %}
+  {% elif c.descartada %}<span class="tag">{% if c.juntada_para %}juntada a outra comanda{% else %}descartada{% endif %}</span>
+  {% else %}<span class="tag verde">aberta</span> · consumo até agora {{ consumo|reais }}{% endif %}
+</div>
+{% for p in pedidos %}
+<div class="tabela"><table>
+  <tr><th colspan="2">{{ p.feito_em|date:"H:i" }} · {{ p.garcom }}{% if p.offline %} · sem conexão{% endif %}
+    {% if p.situacao == 'pendente' %}<span class="tag vermelha">atrasado: aguarda gerente</span>{% elif p.situacao == 'descartado' %}<span class="tag">descartado</span>{% endif %}</th><th class="v"></th></tr>
+  {% for i in p.itens.all %}<tr><td>{{ i.qtd }}x {{ i.produto }} {{ i.variante }}{% if i.obs %} <span class="suave">» {{ i.obs }}</span>{% endif %}</td>
+    <td>{% if i.cancelado_em %}<span class="tag vermelha">cancelado por {{ i.cancelado_por }}</span>{% endif %}</td>
+    <td class="v" {% if i.cancelado_em %}style="text-decoration:line-through"{% endif %}>{{ i.total|reais }}</td></tr>{% endfor %}
+</table></div>
+{% empty %}<p class="suave">Sem pedidos.</p>{% endfor %}
+<a class="btn" href="javascript:history.back()">Voltar</a>
+{% endblock %}
