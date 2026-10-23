@@ -21,6 +21,8 @@ class Par {
   String ip;
   int porta;
   String usuario = '', modelo = '';
+  int? usuarioId;
+  int loginEm = 0;
   int nota = 0, termo = 0;
   String? lider;
   bool elegivel = true;
@@ -167,6 +169,8 @@ class RedeLocal {
         'id': eu,
         'bar': _bar,
         'usuario': app.usuario?.nome ?? '',
+        'usuario_id': app.usuario?.id,
+        'login_em': app.loginEm,
         'modelo': app.modelo,
         'porta': portaLan,
         'nota': nota,
@@ -189,6 +193,8 @@ class RedeLocal {
     if (ip != null && ip.isNotEmpty) p.ip = ip;
     p.porta = (j['porta'] ?? p.porta) as int;
     p.usuario = (j['usuario'] ?? '') as String;
+    p.usuarioId = j['usuario_id'] as int?;
+    p.loginEm = (j['login_em'] ?? 0) as int;
     p.modelo = (j['modelo'] ?? '') as String;
     p.nota = (j['nota'] ?? 0) as int;
     p.elegivel = j['elegivel'] != false;
@@ -355,6 +361,7 @@ class RedeLocal {
       if (antes != (eleicao.termo, eleicao.lider)) _mudouLider(antes.$2);
 
       _verIsolamento();
+      await app.verificarDuplicado();
       await _servico();
       await sincronizar();
     } catch (e) {

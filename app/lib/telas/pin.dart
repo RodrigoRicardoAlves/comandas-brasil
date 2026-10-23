@@ -45,12 +45,28 @@ class _TelaPinState extends State<TelaPin> {
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 380),
                   child: Column(children: [
+                    if (a.avisoSessao != null)
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 18),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(color: corAmbar.withValues(alpha: .15), borderRadius: BorderRadius.circular(12)),
+                        child: Text(a.avisoSessao!, style: const TextStyle(color: corAmbar, fontSize: 15)),
+                      ),
                     Text(a.boot!.bar.nome, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 6),
                     const Text('Digite seu PIN', style: TextStyle(color: Colors.white70, fontSize: 16)),
                     const SizedBox(height: 18),
                     Text(_pin.isEmpty ? '• • • •' : '●' * _pin.length, style: const TextStyle(fontSize: 34, letterSpacing: 8)),
-                    SizedBox(height: 28, child: _erro == null ? null : Text(_erro!, style: const TextStyle(color: corVermelha, fontSize: 16))),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 22),
+                        child: _erro == null
+                            ? null
+                            : Text(_erro!, textAlign: TextAlign.center, style: const TextStyle(color: corVermelha, fontSize: 16)),
+                      ),
+                    ),
                     TecladoNumerico(
                       aoDigitar: (d) => setState(() {
                         if (_pin.length < 8) _pin += d;

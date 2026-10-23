@@ -60,6 +60,9 @@ class App extends ChangeNotifier {
   String servidor = servidorPadrao;
   Bootstrap? boot;
   Usuario? usuario; // quem está usando o celular agora
+  int loginEm = 0; // quando entrou (desempata se o mesmo garçom aparecer em dois celulares)
+  String? avisoSessao; // por que a sessão foi encerrada (mostrado na tela de PIN)
+  String? _pinPendente; // entrou sem internet: confirma no servidor quando conectar (só na memória)
   bool get logado => usuario != null && boot != null;
   bool get temSessaoServidor => api.token != null;
 
@@ -103,6 +106,8 @@ class App extends ChangeNotifier {
     if (b != null) boot = Bootstrap.json(b);
     final u = await banco.lerJson('usuario');
     if (u != null && boot != null) usuario = Usuario.json(u);
+    loginEm = int.tryParse(await banco.ler('login_em') ?? '') ?? 0;
+    if (usuario != null && loginEm == 0) await _marcarLogin();
     await _recalcular();
     Sistema.iniciar();
     if (logado) unawaited(rede.iniciar());
@@ -152,6 +157,7 @@ class App extends ChangeNotifier {
     await banco.gravarJson('bootstrap', b);
     usuario = boot!.usuarios.firstWhere((u) => u.id == (r['usuario'] as Map)['id']);
     await banco.gravarJson('usuario', usuario!.json());
+    await _marcarLogin();
     if (mudouBar) _ultimoSeq = 0;
     online = true;
     await _recalcular();
@@ -160,25 +166,84 @@ class App extends ChangeNotifier {
     unawaited(ciclo());
   }
 
+  Future<void> _marcarLogin() async {
+    loginEm = agoraMs();
+    avisoSessao = null;
+    await banco.gravar('login_em', '$loginEm');
+  }
+
+  /// Em qual outro celular este garçom está agora (rede local ou VPS). null = em nenhum.
+  String? celularEmUso(Usuario u) {
+    for (final p in rede.vivos()) {
+      if (p.usuarioId == u.id) return p.modelo.isEmpty ? 'outro celular' : p.modelo;
+    }
+    final recente = ultimoContato != null && DateTime.now().difference(ultimoContato!).inSeconds < 60;
+    for (final ap in recente ? aparelhos : const <Map<String, dynamic>>[]) {
+      if (ap['usuario_id'] == u.id && ap['device_id'] != deviceId) return '${ap['modelo'] ?? 'outro celular'}';
+    }
+    return null;
+  }
+
+  Map<String, dynamic> _dadosLogin(String pin) =>
+      {'bar': boot!.bar.slug, 'pin': pin, 'device_id': deviceId, 'modelo': modelo, 'versao_app': versaoApp};
+
   /// Troca de garçom no mesmo celular: funciona sem internet (confere o PIN guardado).
+  /// O mesmo garçom não pode estar em dois celulares ao mesmo tempo.
   Future<void> entrarComPin(String pin) async {
     if (boot == null) throw ErroApp('Faça o primeiro acesso com internet');
     final h = hashPin(pin);
     final u = boot!.usuarios.where((u) => u.pinHash == h).firstOrNull;
     if (u == null) throw ErroApp('PIN incorreto');
+    if (!rede.ativa) {
+      // rede local desligada (encerrou o turno): liga e dá um tempo para achar os outros celulares
+      await rede.iniciar();
+      await Future.delayed(const Duration(seconds: 4));
+    }
+    final outro = celularEmUso(u);
+    if (outro != null) {
+      throw ErroApp('${u.nome} já está usando o celular $outro. Encerre o turno nele primeiro.');
+    }
+    // com internet, o servidor confirma (ele sabe de celulares que esta rede não enxerga)
+    _pinPendente = null;
+    try {
+      final r = await api.post('/login', _dadosLogin(pin), const Duration(seconds: 4));
+      api.token = r['token'] as String;
+      await banco.gravar('token', api.token);
+    } on ErroApi catch (e) {
+      if (e.status == 409) throw ErroApp(e.msg);
+      _pinPendente = pin;
+    } catch (_) {
+      _pinPendente = pin; // sem internet: confirma quando conectar
+    }
     usuario = u;
     await banco.gravarJson('usuario', u.json());
+    await _marcarLogin();
     notifyListeners();
     unawaited(rede.iniciar());
-    // avisa o servidor quem está com o celular (se houver internet)
-    {
-      unawaited(api.post('/login', {
-        'bar': boot!.bar.slug, 'pin': pin, 'device_id': deviceId, 'modelo': modelo, 'versao_app': versaoApp,
-      }).then((r) async {
-        api.token = r['token'] as String;
-        await banco.gravar('token', api.token);
-        unawaited(ciclo());
-      }).catchError((_) {}));
+    unawaited(ciclo());
+  }
+
+  /// Sai do garçom atual sem apagar nada (os registros dele continuam na fila).
+  Future<void> _encerrarSessao(String motivo) async {
+    if (usuario == null) return;
+    avisoSessao = motivo;
+    _pinPendente = null;
+    await trocarUsuario();
+  }
+
+  /// O mesmo garçom apareceu em outro celular da rede (entraram enquanto estavam separados):
+  /// fica quem entrou primeiro.
+  Future<void> verificarDuplicado() async {
+    final u = usuario;
+    if (u == null) return;
+    for (final p in rede.vivos()) {
+      if (p.usuarioId != u.id) continue;
+      final elePrimeiro = p.loginEm < loginEm || (p.loginEm == loginEm && p.id.compareTo(deviceId) < 0);
+      if (elePrimeiro) {
+        await _encerrarSessao('${u.nome} já estava no celular ${p.modelo}. Este celular saiu; '
+            'o que você lançou aqui foi guardado.');
+        return;
+      }
     }
   }
 
@@ -194,10 +259,19 @@ class App extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Tira o garçom do celular (volta para a tela de PIN). Avisa o servidor, para ele poder
+  /// entrar em outro celular. Os registros já feitos continuam na fila.
   Future<void> trocarUsuario() async {
     usuario = null;
+    _pinPendente = null;
     await banco.gravar('usuario', null);
     notifyListeners();
+    final t = api.token;
+    api.token = null;
+    await banco.gravar('token', null);
+    if (t != null) {
+      unawaited(Api(servidor, token: t).post('/logout', null, const Duration(seconds: 5)).then((_) {}, onError: (_) {}));
+    }
   }
 
   /// Ir embora: só com tudo enviado.
@@ -213,11 +287,6 @@ class App extends ChangeNotifier {
       throw ErroApp('Este celular é o líder e não conseguiu passar a vez para outro. Tente de novo.');
     }
     await rede.parar();
-    try {
-      await api.post('/logout');
-    } catch (_) {}
-    api.token = null;
-    await banco.gravar('token', null);
     await trocarUsuario();
   }
 
@@ -508,10 +577,28 @@ class App extends ChangeNotifier {
   // ------------------------------------------------------------------ sincronização com a VPS
 
   Future<void> ciclo() async {
-    if (_ciclando || api.token == null) return;
+    if (_ciclando || boot == null) return;
+    if (api.token == null && _pinPendente == null) return;
     _ciclando = true;
     try {
       await lerBateria();
+      // entrou sem internet: confirma agora no servidor
+      final pin = _pinPendente;
+      if (pin != null && usuario != null) {
+        try {
+          final r = await api.post('/login', _dadosLogin(pin));
+          api.token = r['token'] as String;
+          await banco.gravar('token', api.token);
+          _pinPendente = null;
+        } on ErroApi catch (e) {
+          if (e.status == 409) {
+            await _encerrarSessao(e.msg);
+            return;
+          }
+          if (e.status == 401) _pinPendente = null; // PIN mudou no painel
+        }
+      }
+      if (api.token == null) return;
       // 1) envia o que está na fila
       for (var volta = 0; volta < 10; volta++) {
         final evs = await banco.naoEnviados();
@@ -562,9 +649,11 @@ class App extends ChangeNotifier {
       unawaited(_imprimirChamados());
     } on ErroApi catch (e) {
       if (e.status == 401) {
-        // sessão encerrada no servidor (ex.: gerente desconectou o aparelho)
+        // sessão encerrada no servidor: gerente desconectou o celular ou o garçom entrou em outro
         api.token = null;
         await banco.gravar('token', null);
+        await _encerrarSessao('Sua sessão foi encerrada: você entrou em outro celular ou o gerente '
+            'desconectou este. Digite o PIN para entrar de novo.');
       }
       online = e.status < 500;
     } catch (_) {

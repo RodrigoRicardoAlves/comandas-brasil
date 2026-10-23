@@ -13,6 +13,8 @@ def ev(uuid, tipo, dados, hora=1792700000000):
 
 class Base(TestCase):
     def setUp(self):
+        from config import api
+        api._tentativas.clear()  # o limite de tentativas é por processo
         self.a = Bar.objects.create(nome='Bar A', slug='bar-a')
         self.b = Bar.objects.create(nome='Bar B', slug='bar-b')
         for bar in (self.a, self.b):
@@ -146,3 +148,22 @@ class Etapa5Test(Base):
                     ev('evento5-014', 'pedido_lancado', {'pedido': 'py', 'comanda': 'x2', 'itens': []}))
         self.assertTrue(Comanda.objects.get(uuid='x2').descartada)
         self.assertEqual(set(Pedido.objects.filter(comanda__uuid='x1').values_list('uuid', flat=True)), {'px', 'py'})
+
+
+class UmCelularPorGarcomTest(Base):
+    def test_nao_entra_em_segundo_celular_ativo(self):
+        from contas.models import Aparelho
+        t1 = self.login('bar-a', dev='cel1')
+        self.post('/presenca', {}, t1)
+        r = self.post('/login', {'bar': 'bar-a', 'pin': '1234', 'device_id': 'cel2', 'modelo': 'Outro'})
+        self.assertEqual(r.status_code, 409)
+        self.assertIn('já está usando outro celular', r.json()['detail'])
+        # o mesmo celular pode entrar de novo (ex.: reinstalou o app)
+        self.login('bar-a', dev='cel1')
+        # o primeiro sumiu há tempo: o segundo assume e a sessão velha cai
+        from datetime import timedelta
+        from django.utils import timezone
+        Aparelho.objects.filter(device_id='cel1').update(ultimo_contato=timezone.now() - timedelta(minutes=5))
+        t1 = Aparelho.objects.get(device_id='cel1').token
+        self.login('bar-a', dev='cel2')
+        self.assertEqual(self.get('/bootstrap', t1).status_code, 401)

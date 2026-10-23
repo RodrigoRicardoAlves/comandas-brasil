@@ -20,6 +20,7 @@ from contas.models import Aparelho, Usuario, hash_pin
 from publico.models import Chamado
 
 ONLINE_SEGUNDOS = 30  # aparelho sem presença há mais que isso = sem internet
+OCUPADO_SEGUNDOS = 120  # garçom ativo em outro celular há menos que isso: não deixa entrar em um segundo
 
 
 class TokenAparelho(HttpBearer):
@@ -73,6 +74,13 @@ def login(request, d: LoginIn):
     u = Usuario.objects.filter(bar=bar, ativo=True, pin_hash=hash_pin(bar, d.pin.strip())).first()
     if not u:
         raise HttpError(401, 'PIN incorreto')
+    # o mesmo garçom não pode estar em dois celulares ao mesmo tempo
+    outros = Aparelho.objects.filter(bar=bar, usuario=u, token__isnull=False).exclude(device_id=d.device_id[:64])
+    ativo = outros.filter(ultimo_contato__gte=timezone.now() - timedelta(seconds=OCUPADO_SEGUNDOS)).first()
+    if ativo:
+        raise HttpError(409, f'{u.nome} já está usando outro celular ({ativo.modelo or "sem nome"}). '
+                             'Encerre o turno nele ou peça ao gerente para desconectá-lo.')
+    outros.update(token=None, usuario=None, lider=False)  # celular desligado/sumido: a sessão velha cai
     ap, _ = Aparelho.objects.get_or_create(bar=bar, device_id=d.device_id[:64])
     ap.usuario = u
     ap.modelo = d.modelo[:80]
@@ -191,7 +199,8 @@ def presenca(request, d: PresencaIn):
     return {
         'agora': timezone.now().isoformat(),
         'versao_cardapio': Bar.objects.values_list('versao_cardapio', flat=True).get(pk=ap.bar_id),
-        'aparelhos': [{'device_id': o.device_id, 'modelo': o.modelo, 'usuario': o.usuario.nome, 'ip': o.ip_local,
+        'aparelhos': [{'device_id': o.device_id, 'modelo': o.modelo, 'usuario': o.usuario.nome,
+                       'usuario_id': o.usuario_id, 'ip': o.ip_local,
                        'porta': o.porta_local, 'bateria': o.bateria, 'carregando': o.carregando, 'lider': o.lider,
                        'pendentes': o.pendentes} for o in outros],
         'chamados': [c.como_dict() for c in chamados],
