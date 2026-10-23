@@ -131,6 +131,13 @@
   footer { background:#160e08; color:#bfae8c; text-align:center; padding:22px 16px 30px; font-size:15px; }
   footer a { color:#e8d6ae; }
   .so-desktop { display:block } @media (max-width:860px) { .so-desktop { display:none } }
+
+  /* botão flutuante do WhatsApp */
+  .zap { position:fixed; right:18px; bottom:18px; z-index:999; width:60px; height:60px; border-radius:50%;
+    background:#25d366; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 6px 18px rgba(0,0,0,.35); transition:transform .15s; }
+  .zap:hover { transform:scale(1.08); }
+  .zap svg { width:34px; height:34px; fill:#fff; }
 </style>
 </head>
 <body>
@@ -201,6 +208,7 @@
       <div class="linha"><span>RELATÓRIO DO DIA E DO MÊS</span><span class="pontos"></span><span class="preco">INCLUSO</span></div>
       <div class="linha"><span>CANCELAMENTO SÓ C/ GERENTE</span><span class="pontos"></span><span class="preco">INCLUSO</span></div>
       <div class="linha destaque"><span>COMPUTADOR NO BAR</span><span class="pontos"></span><span class="preco"><span class="torta">NÃO PRECISA</span></span></div>
+      <div class="linha destaque"><span>PLANOS A PARTIR DE</span><span class="pontos"></span><span class="preco">R$ 49,90</span></div>
     </div>
     <div class="prego" style="margin-top:40px"></div><div class="fio" style="height:24px"></div>
     <figure class="quadro" style="transform:rotate(2.5deg)"><img src="{% static 'publico/quadro.jpg' %}?v=1" alt="Pôster Comandas Brasil: gerenciador de bar, app de bar" loading="lazy" width="700" height="458"></figure>
@@ -289,5 +297,8 @@
     bala.appendChild(b); bala.appendChild(document.createTextNode(dicas[i][1]));
   });
 </script>
+<a class="zap" href="https://wa.me/5516997483141?text=Ol%C3%A1!%20Vim%20pelo%20site%20do%20Comandas%20Brasil." target="_blank" rel="noopener" aria-label="Conversar no WhatsApp" title="Conversar no WhatsApp">
+  <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16.04 3C8.86 3 3.03 8.82 3.03 16c0 2.3.6 4.54 1.74 6.51L3 29l6.65-1.74A12.95 12.95 0 0 0 16.04 29C23.2 29 29 23.18 29 16S23.2 3 16.04 3zm0 23.8c-2 0-3.95-.54-5.65-1.55l-.4-.24-3.95 1.03 1.05-3.85-.26-.4A10.77 10.77 0 0 1 5.2 16c0-5.97 4.86-10.82 10.84-10.82 5.96 0 10.8 4.85 10.8 10.82 0 5.97-4.84 10.8-10.8 10.8zm5.93-8.1c-.33-.16-1.93-.95-2.23-1.06-.3-.11-.52-.16-.74.17-.22.32-.85 1.06-1.04 1.28-.19.22-.38.24-.71.08-.33-.16-1.38-.51-2.63-1.62-.97-.87-1.63-1.94-1.82-2.27-.19-.32-.02-.5.14-.66.15-.15.33-.38.49-.57.16-.19.22-.32.33-.54.11-.22.05-.41-.03-.57-.08-.16-.74-1.78-1.01-2.44-.27-.64-.54-.55-.74-.56h-.63c-.22 0-.57.08-.87.41-.3.32-1.14 1.11-1.14 2.71s1.17 3.15 1.33 3.36c.16.22 2.3 3.5 5.56 4.91.78.34 1.39.54 1.86.69.78.25 1.49.21 2.05.13.63-.09 1.93-.79 2.2-1.55.27-.76.27-1.41.19-1.55-.08-.13-.3-.21-.63-.38z"/></svg>
+</a>
 </body>
 </html>
