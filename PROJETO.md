@@ -401,7 +401,7 @@ Cada etapa termina com algo testável.
   servidor (`/login` devolve 409 se o mesmo usuário está em outro aparelho com contato nos últimos
   2 min; se o outro sumiu há mais tempo, a sessão velha cai e ele recebe 401 → volta para o PIN),
   rede local (o app confere os celulares vivos antes de aceitar o PIN; liga a rede e espera 4 s se ela
-  estava desligada) e reencontro (dois celulares que entraram com o mesmo PIN separados: fica o que
-  entrou primeiro, `login_em`; o outro volta ao PIN com aviso e os registros ficam guardados).
+  estava desligada) e reencontro (dois celulares que entraram com o mesmo PIN separados: fica o login
+  mais recente, `login_em`, o mesmo critério do servidor; o outro volta ao PIN com aviso e os registros ficam guardados).
   Entrar sem internet guarda o PIN só na memória e confirma no servidor quando conectar.
   "Trocar garçom" e "Encerrar turno" avisam o servidor (`/logout`).

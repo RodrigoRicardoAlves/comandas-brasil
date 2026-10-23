@@ -233,17 +233,17 @@ class App extends ChangeNotifier {
     await trocarUsuario();
   }
 
-  /// O mesmo garçom apareceu em outro celular da rede (entraram enquanto estavam separados):
-  /// fica quem entrou primeiro.
+  /// O mesmo garçom apareceu em outro celular da rede (entrou em outro enquanto este estava
+  /// desligado ou fora da rede): fica o login mais recente, o mesmo que o servidor aceitou.
   Future<void> verificarDuplicado() async {
     final u = usuario;
     if (u == null) return;
     for (final p in rede.vivos()) {
       if (p.usuarioId != u.id) continue;
-      final elePrimeiro = p.loginEm < loginEm || (p.loginEm == loginEm && p.id.compareTo(deviceId) < 0);
-      if (elePrimeiro) {
-        await _encerrarSessao('${u.nome} já estava no celular ${p.modelo}. Este celular saiu; '
-            'o que você lançou aqui foi guardado.');
+      final eleDepois = p.loginEm > loginEm || (p.loginEm == loginEm && p.id.compareTo(deviceId) < 0);
+      if (eleDepois) {
+        await _encerrarSessao('${u.nome} entrou no celular ${p.modelo}. Este celular saiu; '
+            'o que foi lançado aqui está guardado e já foi passado para os outros.');
         return;
       }
     }
