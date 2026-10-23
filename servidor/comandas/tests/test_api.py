@@ -211,3 +211,29 @@ class GerenteAppTest(Base):
         self.assertEqual(self.client.get('/app/comandas.apk').status_code, 404)
         self.assertEqual(self.client.get('/privacidade/').status_code, 200)
         self.assertContains(self.client.get('/'), 'TABELA DA CASA')
+
+
+class PainelViaAppTest(Base):
+    def test_garcom_nao_abre(self):
+        t = self.login('bar-a')
+        self.assertEqual(self.post('/painel/acesso', {}, t).status_code, 403)
+
+    def test_gerente_entra_uma_vez(self):
+        g = Usuario(bar=self.a, nome='Gerente', papel='gerente')
+        g.definir_pin('9999')
+        g.save()
+        t = self.login('bar-a', '9999')
+        caminho = self.post('/painel/acesso', {}, t).json()['caminho']
+        r = self.client.get(caminho)
+        self.assertRedirects(r, '/painel/', fetch_redirect_response=False)
+        self.assertEqual(self.client.get('/painel/').status_code, 200)
+        # o mesmo link não serve de novo
+        self.client.logout()
+        r = self.client.get(caminho)
+        self.assertRedirects(r, '/painel/entrar/', fetch_redirect_response=False)
+        self.assertEqual(self.client.get('/painel/').status_code, 302)
+
+    def test_link_adulterado(self):
+        r = self.client.get('/painel/via-app/?t=lixo')
+        self.assertRedirects(r, '/painel/entrar/', fetch_redirect_response=False)
+

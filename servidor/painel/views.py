@@ -4,6 +4,7 @@ Toda consulta usa `request.bar` (o bar do gerente logado): um gerente nunca vê 
 """
 import csv
 import io
+import secrets
 import time
 from datetime import datetime, timedelta
 from functools import wraps
@@ -11,6 +12,8 @@ from functools import wraps
 import qrcode
 import qrcode.image.svg
 from django.conf import settings
+from django.core import signing
+from django.core.cache import cache
 from django.contrib import messages
 from django.db.models import Count, F, ProtectedError, Sum
 from django.http import HttpResponse
@@ -70,6 +73,34 @@ def entrar(request):
                 return redirect(destino if destino.startswith('/painel/') else 'painel:inicio')
             form.add_error(None, 'Código do bar ou PIN de gerente incorreto.')
     return render(request, 'painel/entrar.html', {'form': form})
+
+
+# ------------------------------------------------------------------ entrada pelo app do gerente
+
+VIA_APP_SEGUNDOS = 60
+
+
+def link_via_app(u):
+    """Link de entrada no painel, assinado, que vale uma vez e por pouco tempo (o app abre na hora)."""
+    t = signing.dumps({'u': u.pk, 'n': secrets.token_urlsafe(12)}, salt='painel.via_app')
+    return f"{reverse('painel:via_app')}?t={t}"
+
+
+def via_app(request):
+    try:
+        d = signing.loads(request.GET.get('t', ''), salt='painel.via_app', max_age=VIA_APP_SEGUNDOS)
+    except signing.BadSignature:
+        d = None
+    # cada link entra uma vez só
+    u = d and cache.add(f"via_app:{d['n']}", 1, VIA_APP_SEGUNDOS * 2) and (
+        Usuario.objects.filter(pk=d['u'], ativo=True, papel=Usuario.GERENTE, bar__ativo=True).first())
+    if not u:
+        messages.error(request, 'Link de acesso vencido. Abra a gestão de novo pelo app.')
+        return redirect('painel:entrar')
+    request.session.cycle_key()
+    request.session['painel_usuario'] = u.pk
+    request.session['via_app'] = True
+    return redirect('painel:inicio')
 
 
 def sair(request):

@@ -19,8 +19,11 @@ def baixar_apk(request):
     if not caminho.exists():
         raise Http404('App ainda não publicado')
     v = info_app() or {}
-    return FileResponse(open(caminho, 'rb'), as_attachment=True, filename=f"comandas-brasil-{v.get('versao', '')}.apk",
+    resp = FileResponse(open(caminho, 'rb'), as_attachment=True, filename=f"comandas-brasil-{v.get('versao', '')}.apk",
                         content_type='application/vnd.android.package-archive')
+    # a Cloudflare guardava o APK por horas e entregava a versão velha depois de publicar
+    resp['Cache-Control'] = 'no-store'
+    return resp
 
 
 def qr_app(request):

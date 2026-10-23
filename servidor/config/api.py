@@ -243,6 +243,16 @@ def marcar_esgotado(request, pid: int, d: EsgotadoIn):
     return {'ok': True, 'versao_cardapio': Bar.objects.values_list('versao_cardapio', flat=True).get(pk=p.bar_id)}
 
 
+@api.post('/painel/acesso')
+def acesso_painel(request):
+    """Gerente abre o painel dentro do app: devolve um link de entrada que vale uma vez, por 60 s."""
+    u = request.auth.usuario
+    if not u.gerente:
+        raise HttpError(403, 'Só o gerente pode abrir a gestão')
+    from painel.views import link_via_app
+    return {'caminho': link_via_app(u)}
+
+
 # ------------------------------------------------------------------ versão do app (APK direto)
 
 def info_app():
@@ -252,7 +262,7 @@ def info_app():
             v = json.load(f)
     except (OSError, ValueError):
         return None
-    v['url'] = f'{settings.SITE_URL}/app/comandas.apk'
+    v['url'] = f"{settings.SITE_URL}/app/comandas.apk?v={v.get('build', 0)}"  # ?v= fura o cache da Cloudflare
     return v
 
 

@@ -1,7 +1,7 @@
 name: comandas
 description: "Comandas para bares: app dos garçons."
 publish_to: 'none'
-version: 1.0.2+3
+version: 1.0.3+4
 
 environment:
   sdk: ^3.13.2
@@ -24,6 +24,7 @@ dependencies:
   sqflite: ^2.4.5
   uuid: ^4.6.0
   wakelock_plus: ^1.8.0
+  webview_flutter: ^4.14.1
   workmanager: ^0.10.10
 
 dev_dependencies:

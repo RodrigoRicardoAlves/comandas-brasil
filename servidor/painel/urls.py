@@ -6,6 +6,7 @@ app_name = 'painel'
 urlpatterns = [
     path('', views.inicio, name='inicio'),
     path('entrar/', views.entrar, name='entrar'),
+    path('via-app/', views.via_app, name='via_app'),
     path('sair/', views.sair, name='sair'),
     path('cardapio/', views.cardapio, name='cardapio'),
     path('cardapio/categoria/nova/', views.categoria, name='categoria_nova'),

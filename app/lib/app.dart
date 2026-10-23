@@ -544,6 +544,21 @@ class App extends ChangeNotifier {
     }
   }
 
+  /// Gerente abre o painel de gestão dentro do app: o servidor devolve um link de entrada
+  /// que vale uma vez, por 60 s (ninguém precisa digitar código do bar e PIN de novo).
+  Future<Uri> linkGestao() async {
+    if (usuario?.gerente != true) throw ErroApp('Só o gerente pode abrir a gestão');
+    if (api.token == null) throw ErroApp('Precisa de internet para abrir a gestão');
+    try {
+      final r = await api.post('/painel/acesso');
+      return Uri.parse(servidor).resolve(r['caminho'] as String);
+    } on ErroApi catch (e) {
+      throw ErroApp(e.msg);
+    } catch (_) {
+      throw ErroApp('Sem internet agora. Tente de novo em instantes.');
+    }
+  }
+
   /// Gerente marca produto esgotado (precisa de internet; os outros celulares recebem em segundos).
   Future<void> marcarEsgotado(int produtoId, bool esgotado) async {
     if (usuario?.gerente != true) throw ErroApp('Só o gerente pode mudar o cardápio');

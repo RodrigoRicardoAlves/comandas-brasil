@@ -65,10 +65,11 @@
     <a href="{% url 'painel:aparelhos' %}" class="{% if u == 'aparelhos' %}ativo{% endif %}">Celulares</a>
     <a href="{% url 'painel:qr' %}" class="{% if u == 'qr' %}ativo{% endif %}">QR Code</a>
     <a href="{% url 'painel:config' %}" class="{% if u == 'config' %}ativo{% endif %}">Configurações</a>
-    <a href="/app/" target="_blank">Instalar app</a>
+    {% if not request.session.via_app %}<a href="/app/" target="_blank">Instalar app</a>{% endif %}
     {% endwith %}
   </nav>
-  <a class="sair" href="{% url 'painel:sair' %}">{{ request.gerente.nome }} · sair</a>
+  {% if request.session.via_app %}<span class="sair">{{ request.gerente.nome }}</span>
+  {% else %}<a class="sair" href="{% url 'painel:sair' %}">{{ request.gerente.nome }} · sair</a>{% endif %}
 </div></header>
 {% endif %}
 <main>

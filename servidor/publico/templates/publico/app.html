@@ -21,7 +21,7 @@
   <div class="suave" style="text-align:center">App dos garçons · Android</div>
   {% if app %}
   <div class="card">
-    <a class="btn" href="/app/comandas.apk">Baixar o app (versão {{ app.versao }})</a>
+    <a class="btn" href="/app/comandas.apk?v={{ app.build }}">Baixar o app (versão {{ app.versao }})</a>
     {% if app.notas %}<p class="suave">Novidades: {{ app.notas }}</p>{% endif %}
   </div>
   <div class="card">

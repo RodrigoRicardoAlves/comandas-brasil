@@ -8,6 +8,7 @@ import 'comum.dart';
 import 'fechadas.dart';
 import 'bateria.dart';
 import 'esgotados.dart';
+import 'gestao.dart';
 import 'pendencias.dart';
 import 'status.dart';
 
@@ -47,6 +48,8 @@ class _TelaInicioState extends State<TelaInicio> {
         Navigator.push(context, MaterialPageRoute(builder: (_) => const TelaStatus()));
       case 'fechadas':
         Navigator.push(context, MaterialPageRoute(builder: (_) => const TelaFechadas()));
+      case 'gestao':
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const TelaGestao()));
       case 'esgotados':
         Navigator.push(context, MaterialPageRoute(builder: (_) => const TelaEsgotados()));
       case 'bateria':
@@ -96,6 +99,8 @@ class _TelaInicioState extends State<TelaInicio> {
                 itemBuilder: (_) => [
                   const PopupMenuItem(value: 'status', child: ListTile(leading: Icon(Icons.settings), title: Text('Status e impressora'))),
                   const PopupMenuItem(value: 'fechadas', child: ListTile(leading: Icon(Icons.history), title: Text('Comandas fechadas'))),
+                  if (a.usuario!.gerente)
+                    const PopupMenuItem(value: 'gestao', child: ListTile(leading: Icon(Icons.dashboard), title: Text('Gestão do bar'))),
                   if (a.usuario!.gerente)
                     const PopupMenuItem(value: 'esgotados', child: ListTile(leading: Icon(Icons.block), title: Text('Esgotados'))),
                   const PopupMenuItem(value: 'bateria', child: ListTile(leading: Icon(Icons.battery_charging_full), title: Text('Bateria e segundo plano'))),
