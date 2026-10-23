@@ -1,0 +1,16 @@
+# /etc/systemd/system/comandas-q.service — tarefas agendadas (django-q2), ex.: arquivar celulares parados
+[Unit]
+Description=Comandas Brasil (tarefas django-q2)
+After=network.target mariadb.service
+
+[Service]
+User=comandas
+Group=comandas
+WorkingDirectory=/srv/comandas/servidor
+EnvironmentFile=/srv/comandas/.env
+ExecStart=/srv/comandas/.venv/bin/python manage.py qcluster
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

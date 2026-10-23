@@ -34,6 +34,7 @@ Copie também `servidor/media/` (fotos do cardápio e o APK publicado) do PC.
 ## 5. Serviço e nginx
 ```bash
 sudo cp deploy/comandas.service /etc/systemd/system/ && sudo systemctl enable --now comandas
+sudo cp deploy/comandas-q.service /etc/systemd/system/ && sudo systemctl enable --now comandas-q   # tarefas agendadas
 sudo cp deploy/nginx.conf /etc/nginx/sites-available/comandas && sudo ln -s ../sites-available/comandas /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```

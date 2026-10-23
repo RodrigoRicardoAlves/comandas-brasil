@@ -237,3 +237,40 @@ class PainelViaAppTest(Base):
         r = self.client.get('/painel/via-app/?t=lixo')
         self.assertRedirects(r, '/painel/entrar/', fetch_redirect_response=False)
 
+
+class ArquivarAparelhosTest(Base):
+    def test_so_arquiva_parado_e_sem_pendente(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from contas.models import Aparelho, AparelhoArquivado
+        from contas.tarefas import arquivar_aparelhos_parados
+        agora = timezone.now()
+        velho = agora - timedelta(hours=25)
+        Aparelho.objects.create(bar=self.a, device_id='parado', modelo='Velho', ultimo_contato=velho)
+        Aparelho.objects.create(bar=self.a, device_id='pendente', ultimo_contato=velho, pendentes=3)
+        Aparelho.objects.create(bar=self.a, device_id='ativo', ultimo_contato=agora - timedelta(hours=2))
+        self.assertEqual(arquivar_aparelhos_parados(), '1 aparelho(s) arquivado(s)')
+        self.assertEqual(set(Aparelho.objects.values_list('device_id', flat=True)), {'pendente', 'ativo'})
+        morto = AparelhoArquivado.objects.get()
+        self.assertEqual((morto.device_id, morto.modelo, morto.bar), ('parado', 'Velho', self.a))
+
+    def test_agendada(self):
+        from django_q.models import Schedule
+        self.assertTrue(Schedule.objects.filter(func='contas.tarefas.arquivar_aparelhos_parados',
+                                                schedule_type='H').exists())
+
+    def test_celular_volta_depois_de_arquivado(self):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from contas.models import Aparelho
+        from contas.tarefas import arquivar_aparelhos_parados
+        self.login('bar-a', dev='volta')
+        Aparelho.objects.update(ultimo_contato=timezone.now() - timedelta(days=2))
+        arquivar_aparelhos_parados()
+        self.assertFalse(Aparelho.objects.exists())
+        self.login('bar-a', dev='volta')  # entra de novo normalmente
+        self.assertTrue(Aparelho.objects.filter(device_id='volta').exists())

@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib import admin
 
-from .models import Aparelho, Usuario
+from .models import Aparelho, AparelhoArquivado, Usuario
 
 
 class UsuarioForm(forms.ModelForm):
@@ -44,3 +44,14 @@ class AparelhoAdmin(admin.ModelAdmin):
                     'pendentes']
     list_filter = ['bar']
     readonly_fields = [f.name for f in Aparelho._meta.fields]
+
+
+@admin.register(AparelhoArquivado)
+class AparelhoArquivadoAdmin(admin.ModelAdmin):
+    list_display = ['modelo', 'bar', 'usuario', 'ultimo_contato', 'versao_app', 'arquivado_em']
+    list_filter = ['bar']
+    search_fields = ['modelo', 'device_id']
+    readonly_fields = [f.name for f in AparelhoArquivado._meta.fields]
+
+    def has_add_permission(self, request):
+        return False

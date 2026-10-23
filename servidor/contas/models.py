@@ -70,3 +70,27 @@ class Aparelho(models.Model):
     def novo_token(self):
         self.token = secrets.token_hex(24)
         return self.token
+
+
+class AparelhoArquivado(models.Model):
+    """Tabela morta: celulares parados há mais de 24 h, sem nada pendente, tirados de Aparelho
+    pela tarefa contas.tarefas.arquivar_aparelhos_parados. Só para consulta."""
+    aparelho_id = models.PositiveIntegerField('id original')
+    bar = models.ForeignKey(Bar, on_delete=models.CASCADE, related_name='aparelhos_arquivados')
+    device_id = models.CharField(max_length=64)
+    modelo = models.CharField(max_length=80, blank=True)
+    usuario = models.ForeignKey(Usuario, null=True, blank=True, on_delete=models.SET_NULL)
+    versao_app = models.CharField(max_length=20, blank=True)
+    ultimo_contato = models.DateTimeField(null=True, blank=True)
+    ip_local = models.CharField(max_length=45, blank=True)
+    bateria = models.PositiveSmallIntegerField(null=True, blank=True)
+    criado_em = models.DateTimeField()
+    arquivado_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-arquivado_em']
+        verbose_name = 'aparelho arquivado'
+        verbose_name_plural = 'aparelhos arquivados'
+
+    def __str__(self):
+        return f'{self.modelo or "Aparelho"} (arquivado em {self.arquivado_em:%d/%m/%Y})'

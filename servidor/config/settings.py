@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_q',
     'bares',
     'contas',
     'cardapio',
@@ -107,3 +108,15 @@ CONTATO_EMAIL = env('CONTATO_EMAIL', '')
 
 # o "dia de expediente" vai das 06:00 às 05:59 do dia seguinte
 INICIO_EXPEDIENTE = 6
+
+# Tarefas em segundo plano (django-q2), com o próprio banco como fila.
+# Roda com: python manage.py qcluster  (na VPS: deploy/comandas-q.service)
+Q_CLUSTER = {
+    'name': 'comandas',
+    'orm': 'default',
+    'workers': 1,
+    'timeout': 120,
+    'retry': 180,
+    'catch_up': False,  # se o servidor ficou parado, não roda as vezes perdidas, só a próxima
+}
+SILENCED_SYSTEM_CHECKS = ['models.W037']  # índice condicional do django-q2: o MariaDB ignora, sem efeito
