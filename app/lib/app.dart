@@ -108,6 +108,8 @@ class App extends ChangeNotifier {
     if (u != null && boot != null) usuario = Usuario.json(u);
     loginEm = int.tryParse(await banco.ler('login_em') ?? '') ?? 0;
     if (usuario != null && loginEm == 0) await _marcarLogin();
+    // ninguém logado mas com sessão guardada (versão antiga): libera o garçom no servidor
+    if (usuario == null && api.token != null) await trocarUsuario();
     await _recalcular();
     Sistema.iniciar();
     if (logado) unawaited(rede.iniciar());
