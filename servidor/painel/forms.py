@@ -103,7 +103,8 @@ Variantes = inlineformset_factory(Produto, Variante, form=VarianteForm, extra=2,
 
 class UsuarioForm(forms.ModelForm):
     pin = forms.CharField(label='PIN (4 a 8 números)', required=False, max_length=8,
-                          widget=forms.TextInput(attrs={'inputmode': 'numeric', 'autocomplete': 'off'}))
+                          widget=forms.PasswordInput(render_value=False,
+                              attrs={'inputmode': 'numeric', 'autocomplete': 'new-password'}))
 
     class Meta:
         model = Usuario

@@ -18,6 +18,8 @@ class Usuario(models.Model):
     bar = models.ForeignKey(Bar, on_delete=models.CASCADE, related_name='usuarios')
     nome = models.CharField(max_length=40)
     pin_hash = models.CharField(max_length=64, editable=False)
+    # guardado em texto só para o gerente ver/lembrar na tela de equipe
+    pin = models.CharField(max_length=8, blank=True, editable=False)
     papel = models.CharField(max_length=10, choices=PAPEIS, default=GARCOM)
     ativo = models.BooleanField(default=True)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -40,6 +42,7 @@ class Usuario(models.Model):
         if not pin.isdigit() or not 4 <= len(pin) <= 8:
             raise ValueError('O PIN precisa ter de 4 a 8 números')
         self.pin_hash = hash_pin(self.bar, pin)
+        self.pin = pin
 
 
 class Aparelho(models.Model):
