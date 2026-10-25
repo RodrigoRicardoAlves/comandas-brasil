@@ -15,9 +15,15 @@ class _TelaEntradaState extends State<TelaEntrada> {
   final _bar = TextEditingController();
   final _pin = TextEditingController();
   bool _enviando = false;
-  bool _mostrarServidor = false;
+  // sem endereço embutido (versão de código aberto): já abre o campo do servidor
+  bool _mostrarServidor = App.i.servidor.trim().isEmpty;
 
   Future<void> _entrar() async {
+    if (_servidor.text.trim().isEmpty) {
+      setState(() => _mostrarServidor = true);
+      aviso(context, 'Informe o endereço do servidor', erro: true);
+      return;
+    }
     setState(() => _enviando = true);
     await tentar(context, () => App.i.entrarNoBar(_servidor.text, _bar.text, _pin.text));
     if (mounted) setState(() => _enviando = false);
@@ -56,7 +62,13 @@ class _TelaEntradaState extends State<TelaEntrada> {
                 FilledButton(onPressed: _enviando ? null : _entrar, child: Text(_enviando ? 'Entrando...' : 'Entrar')),
                 const SizedBox(height: 18),
                 if (_mostrarServidor)
-                  TextField(controller: _servidor, decoration: const InputDecoration(labelText: 'Endereço do servidor'), autocorrect: false)
+                  TextField(
+                    controller: _servidor,
+                    decoration: const InputDecoration(
+                        labelText: 'Endereço do servidor', hintText: 'ex.: https://seubar.com.br'),
+                    keyboardType: TextInputType.url,
+                    autocorrect: false,
+                  )
                 else
                   TextButton(
                     onPressed: () => setState(() => _mostrarServidor = true),

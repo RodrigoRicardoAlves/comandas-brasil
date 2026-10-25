@@ -21,7 +21,9 @@ import 'segundo_plano.dart';
 import 'sistema.dart';
 import 'util.dart';
 
-const servidorPadrao = String.fromEnvironment('SERVIDOR', defaultValue: 'https://bar.rodrigoricardo.eng.br');
+// Endereço do servidor embutido na compilação (SERVIDOR=... no build). Vazio na versão de
+// código aberto: o primeiro acesso pede o endereço. O build oficial grava o endereço real.
+const servidorPadrao = String.fromEnvironment('SERVIDOR');
 const _uuid = Uuid();
 
 /// Item no carrinho antes de enviar o pedido.
