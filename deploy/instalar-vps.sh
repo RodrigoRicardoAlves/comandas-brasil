@@ -36,9 +36,14 @@ command -v apt-get >/dev/null || { echo "Este script é para Debian/Ubuntu (apt)
 echo "== Pacotes =="
 apt-get update -y
 apt-get install -y python3-venv python3-dev build-essential pkg-config nginx git
-# cabeçalhos do cliente para compilar o mysqlclient; o pacote varia: MariaDB usa libmariadb-dev,
-# MySQL usa default-libmysqlclient-dev (e eles conflitam entre si)
-apt-get install -y default-libmysqlclient-dev || apt-get install -y libmariadb-dev
+# cabeçalhos do cliente para compilar o mysqlclient. Se já houver (mariadb_config ou
+# mysql_config), não instala nada — libmariadb-dev e default-libmysqlclient-dev conflitam
+# entre si, então não dá para pedir o errado num servidor que já tem o outro.
+if command -v mariadb_config >/dev/null 2>&1 || command -v mysql_config >/dev/null 2>&1; then
+  echo "   cabeçalhos do cliente já presentes ($(command -v mariadb_config mysql_config 2>/dev/null | head -1))"
+else
+  apt-get install -y libmariadb-dev || apt-get install -y default-libmysqlclient-dev
+fi
 
 echo "== Porta interna livre (a partir de 8100) =="
 porta=8100
