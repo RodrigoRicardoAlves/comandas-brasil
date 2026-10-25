@@ -29,6 +29,24 @@ object Sistema {
     private lateinit var ctx: Context
     private val principal = Handler(Looper.getMainLooper())
 
+    /**
+     * ANDROID_ID e, quando existir, o número da placa. Maquininhas Sunmi gravadas com a mesma
+     * imagem saem com ANDROID_ID e número de série iguais; o número da placa (gsm.serial) não.
+     */
+    private fun idAparelho(): String? {
+        val android = Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ANDROID_ID)
+        val placa = propriedade("gsm.serial").split(" ").firstOrNull { it.isNotBlank() }.orEmpty()
+        return if (placa.length >= 8) "$android:$placa" else android
+    }
+
+    private fun propriedade(nome: String): String = try {
+        Class.forName("android.os.SystemProperties")
+            .getMethod("get", String::class.java)
+            .invoke(null, nome) as? String ?: ""
+    } catch (e: Exception) {
+        ""
+    }
+
     private var multicast: WifiManager.MulticastLock? = null
     private var nsd: NsdManager? = null
     private var registro: NsdManager.RegistrationListener? = null
@@ -61,7 +79,7 @@ object Sistema {
                     "abrirUrl" -> res.success(abrir(Intent(Intent.ACTION_VIEW, Uri.parse(call.argument<String>("url")!!))))
                     "pedirRedeLocal" -> { pedirRedeLocal(); res.success(true) }
                     // identificador do Android: o mesmo depois de reinstalar o app
-                    "idAparelho" -> res.success(Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ANDROID_ID))
+                    "idAparelho" -> res.success(idAparelho())
                     "temImpressoraInterna" -> res.success(ImpressoraInterna.existe)
                     // devolve null quando imprimiu, ou a mensagem de erro
                     "imprimirInterna" -> ImpressoraInterna.imprimir(call.argument<ByteArray>("dados")!!) { res.success(it) }
