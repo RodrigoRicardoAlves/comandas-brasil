@@ -52,11 +52,20 @@ echo "   gunicorn vai usar 127.0.0.1:$porta"
 
 echo "== Usuário e código =="
 id -u "$USUARIO" >/dev/null 2>&1 || useradd -r -m -d "$DESTINO" "$USUARIO"
+mkdir -p "$DESTINO"
 if [ -d "$DESTINO/.git" ]; then
   sudo -u "$USUARIO" git -C "$DESTINO" pull --ff-only
 else
-  sudo -u "$USUARIO" git clone "$REPO" "$DESTINO"
+  # o home do usuário (criado pelo useradd) traz .bashrc etc., então a pasta não está vazia
+  # e o git clone recusaria: clona num temporário e move o conteúdo para dentro
+  tmp=$(mktemp -d)
+  git clone "$REPO" "$tmp/repo"
+  shopt -s dotglob
+  mv "$tmp/repo"/* "$DESTINO"/
+  shopt -u dotglob
+  rm -rf "$tmp"
 fi
+chown -R "$USUARIO:$USUARIO" "$DESTINO"
 
 echo "== Ambiente Python =="
 [ -d "$DESTINO/.venv" ] || sudo -u "$USUARIO" python3 -m venv "$DESTINO/.venv"
