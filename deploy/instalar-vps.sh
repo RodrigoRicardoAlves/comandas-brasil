@@ -107,6 +107,9 @@ fi
 echo "== Migrações e arquivos estáticos =="
 sudo -u "$USUARIO" bash -c "cd '$DESTINO/servidor' && ../.venv/bin/python manage.py migrate --noinput && ../.venv/bin/python manage.py collectstatic --noinput"
 sudo -u "$USUARIO" mkdir -p "$DESTINO/servidor/media/app"
+# o home do usuário costuma vir 750; o nginx (www-data) precisa atravessar e ler estáticos/media
+chmod o+x "$DESTINO" "$DESTINO/servidor"
+chmod -R o+rX "$DESTINO/servidor/staticfiles" "$DESTINO/servidor/media"
 
 echo "== Serviços systemd =="
 sed "s#127.0.0.1:8100#127.0.0.1:$porta#" "$DESTINO/deploy/comandas.service" > /etc/systemd/system/comandas.service
