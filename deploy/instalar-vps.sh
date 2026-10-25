@@ -35,7 +35,10 @@ command -v apt-get >/dev/null || { echo "Este script é para Debian/Ubuntu (apt)
 
 echo "== Pacotes =="
 apt-get update -y
-apt-get install -y python3-venv python3-dev build-essential default-libmysqlclient-dev pkg-config nginx git
+apt-get install -y python3-venv python3-dev build-essential pkg-config nginx git
+# cabeçalhos do cliente para compilar o mysqlclient; o pacote varia: MariaDB usa libmariadb-dev,
+# MySQL usa default-libmysqlclient-dev (e eles conflitam entre si)
+apt-get install -y default-libmysqlclient-dev || apt-get install -y libmariadb-dev
 
 echo "== Porta interna livre (a partir de 8100) =="
 porta=8100
