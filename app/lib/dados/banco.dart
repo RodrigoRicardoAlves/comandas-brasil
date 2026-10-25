@@ -116,6 +116,12 @@ class Banco {
     await b.commit(noResult: true);
   }
 
+  /// Apaga tudo deste celular: eventos e configurações. Usado pelo "Reset de fábrica".
+  Future<void> apagarTudo() async {
+    await _db.delete('eventos');
+    await _db.delete('kv');
+  }
+
   Future<String?> ler(String chave) async {
     final r = await _db.query('kv', where: 'chave = ?', whereArgs: [chave]);
     return r.isEmpty ? null : r.first['valor'] as String?;

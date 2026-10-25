@@ -312,6 +312,42 @@ class App extends ChangeNotifier {
     await trocarUsuario();
   }
 
+  /// Reset de fábrica deste celular: apaga comandas, sessão e configurações locais e volta
+  /// ao primeiro acesso. Não mexe em outros celulares nem no servidor (nada de offline é tocado
+  /// além do que está só aqui). Pedidos ainda não enviados deste celular se perdem.
+  Future<void> resetAparelho() async {
+    _timer?.cancel();
+    final t = api.token;
+    if (t != null) {
+      unawaited(Api(servidor, token: t).post('/logout', null, const Duration(seconds: 5)).then((_) {}, onError: (_) {}));
+    }
+    await rede.parar();
+    await banco.apagarTudo();
+    // estado em memória volta ao padrão
+    boot = null;
+    usuario = null;
+    _pinPendente = null;
+    avisoSessao = null;
+    loginEm = 0;
+    _ultimoSeq = 0;
+    servidor = servidorPadrao;
+    impressoraLocal = '';
+    estado = Estado();
+    online = false;
+    naFila = 0;
+    aparelhos = [];
+    chamados = [];
+    // o device_id é regerado do próprio Android (mesmo identificador), para o app seguir usável
+    final android = await Sistema.idAparelho();
+    deviceId = android != null && android.length >= 8
+        ? 'a-${sha256.convert(utf8.encode('comandas:$android')).toString().substring(0, 32)}'
+        : _uuid.v4();
+    await banco.gravar('device_id', deviceId);
+    api = Api(servidorPadrao);
+    _timer = Timer.periodic(const Duration(seconds: 4), (_) => ciclo());
+    notifyListeners();
+  }
+
   // ------------------------------------------------------------------ eventos
 
   Future<Map<String, dynamic>> _registrar(String tipo, Map<String, dynamic> dados) async {

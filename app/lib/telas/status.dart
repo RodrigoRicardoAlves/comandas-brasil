@@ -25,6 +25,27 @@ class _TelaStatusState extends State<TelaStatus> {
     });
   }
 
+  Future<void> _resetar(BuildContext context, App a) async {
+    final n = await a.banco.contarPendentes();
+    final extra = n > 0
+        ? '\n\nATENÇÃO: há $n pedido(s) só neste celular que ainda não foram enviados. Eles vão se perder.'
+        : '';
+    if (!context.mounted) return;
+    if (!await confirmar(context, 'Reset de fábrica',
+        'Isto apaga TODAS as comandas, o login e as configurações deste celular e volta ao primeiro acesso. '
+        'Os outros celulares e o servidor não são afetados.$extra',
+        sim: 'Apagar tudo', perigo: true)) {
+      return;
+    }
+    if (!context.mounted) return;
+    if (!await confirmar(context, 'Tem certeza?', 'Esta ação não pode ser desfeita.',
+        sim: 'Sim, apagar', perigo: true)) {
+      return;
+    }
+    await a.resetAparelho();
+    if (context.mounted) Navigator.of(context).popUntil((r) => r.isFirst);
+  }
+
   Future<void> _usar(String v) async {
     _impressora.text = v;
     await App.i.definirImpressoraLocal(v);
@@ -189,6 +210,24 @@ class _TelaStatusState extends State<TelaStatus> {
               child: OutlinedButton(
                 onPressed: () => tentar(context, a.atualizarCardapio, ok: 'Cardápio atualizado'),
                 child: const Text('Atualizar cardápio agora'),
+              ),
+            ),
+            const _Titulo('Reset de fábrica'),
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                'Apaga tudo deste celular (comandas, login e configurações) e volta ao primeiro acesso. '
+                'Não afeta os outros celulares nem o servidor. Pedidos ainda não enviados deste celular se perdem.',
+                style: TextStyle(fontSize: 13, color: Colors.white70),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.restart_alt, color: corVermelha),
+                style: OutlinedButton.styleFrom(foregroundColor: corVermelha),
+                onPressed: () => _resetar(context, a),
+                label: const Text('Reset de fábrica'),
               ),
             ),
           ]),
