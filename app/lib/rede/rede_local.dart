@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../app.dart';
+import '../dados/modelos.dart';
 import '../impressao/impressora.dart';
 import '../sistema.dart';
 import '../util.dart';
@@ -506,8 +507,30 @@ class RedeLocal {
 
   // ------------------------------------------------------------------ impressão via líder
 
-  /// Só o líder fala com a impressora. Se o líder não estiver alcançável, imprime direto.
+  /// Envia o cupom ao destino. Impressora de um PDV específico (`pdv:<id>`) vai para aquela
+  /// maquininha (ou imprime aqui, se for este aparelho). WiFi passa pelo líder; sem líder
+  /// alcançável, imprime direto.
   Future<void> imprimir(String alvo, List<int> bytes) async {
+    if (DestinoPdv.ehPdv(alvo)) {
+      final id = DestinoPdv.id(alvo);
+      if (id == eu) {
+        await Impressora.enviar(Impressora.interna, bytes);
+        return;
+      }
+      final p = pares[id];
+      if (p == null || !p.vivo(agoraMs())) {
+        throw ErroImpressora('A maquininha dessa impressora está fora do ar (ligue-a e conecte à Wi-Fi do bar)');
+      }
+      Map<String, dynamic> r;
+      try {
+        r = await _post(p, '/imprimir', {'alvo': Impressora.interna, 'dados': base64Encode(bytes)},
+            tempo: const Duration(seconds: 25));
+      } catch (_) {
+        throw ErroImpressora('Não consegui falar com a maquininha dessa impressora');
+      }
+      if (r['ok'] != true) throw ErroImpressora('${r['erro'] ?? 'A impressora não respondeu'}');
+      return;
+    }
     final l = parLider;
     // a impressora embutida só existe neste aparelho: nunca passa pelo líder
     if (Impressora.ehInterna(alvo) || souLider || l == null || !l.vivo(agoraMs())) {

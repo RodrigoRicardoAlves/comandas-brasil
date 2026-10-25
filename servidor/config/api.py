@@ -65,7 +65,8 @@ def usuario_dict(u):
 def bar_dict(b):
     return {'id': b.id, 'nome': b.nome, 'slug': b.slug, 'rodape': b.rodape, 'colunas_papel': b.colunas_papel,
             'codificacao': b.codificacao, 'cortar_papel': b.cortar_papel, 'taxa_servico': float(b.taxa_servico),
-            'max_comanda': b.max_comanda, 'impressora': b.impressora, 'versao_cardapio': b.versao_cardapio}
+            'max_comanda': b.max_comanda, 'impressora': b.impressora, 'impressora_conta': b.impressora_conta,
+            'versao_cardapio': b.versao_cardapio}
 
 
 @api.post('/login', auth=None)

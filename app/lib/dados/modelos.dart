@@ -1,7 +1,7 @@
 /// Dados que vêm da VPS (bootstrap) e ficam guardados no celular.
 class BarCfg {
   final int id;
-  final String nome, slug, rodape, codificacao, impressora;
+  final String nome, slug, rodape, codificacao, impressora, impressoraConta;
   final int colunas, maxComanda, versaoCardapio;
   final bool cortar;
   final double taxaServico;
@@ -13,6 +13,7 @@ class BarCfg {
         rodape = j['rodape'] ?? '',
         codificacao = j['codificacao'] ?? 'ascii',
         impressora = j['impressora'] ?? '',
+        impressoraConta = j['impressora_conta'] ?? '',
         colunas = j['colunas_papel'] ?? 48,
         maxComanda = j['max_comanda'] ?? 200,
         versaoCardapio = j['versao_cardapio'] ?? 0,
@@ -25,6 +26,7 @@ class BarCfg {
         slug = b.slug,
         rodape = b.rodape,
         impressora = b.impressora,
+        impressoraConta = b.impressoraConta,
         maxComanda = b.maxComanda,
         versaoCardapio = b.versaoCardapio,
         taxaServico = b.taxaServico;
@@ -117,4 +119,14 @@ class Bootstrap {
     }
     return bar.impressora;
   }
+
+  /// Impressora da conta (vazio = padrão do bar).
+  String get impressoraDaConta => bar.impressoraConta.isNotEmpty ? bar.impressoraConta : bar.impressora;
+}
+
+/// Endereço de uma impressora embutida de um PDV específico: `pdv:<device_id>`.
+class DestinoPdv {
+  static const prefixo = 'pdv:';
+  static bool ehPdv(String alvo) => alvo.startsWith(prefixo);
+  static String id(String alvo) => alvo.substring(prefixo.length);
 }

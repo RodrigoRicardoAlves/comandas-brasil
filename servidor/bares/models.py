@@ -31,6 +31,8 @@ class Bar(models.Model):
     max_comanda = models.PositiveIntegerField('maior número de comanda', default=200)
     impressora = models.CharField('impressora padrão', max_length=80, blank=True,
                                   help_text='IP da impressora na rede do bar, ex.: 192.168.1.50:9100')
+    impressora_conta = models.CharField('impressora da conta', max_length=80, blank=True,
+                                        help_text='Onde sai a conta do cliente. Vazio = impressora padrão do bar.')
 
     class Meta:
         verbose_name = 'bar'

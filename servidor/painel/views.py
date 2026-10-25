@@ -34,6 +34,16 @@ from .forms import (BarForm, CategoriaForm, EntrarForm, PeriodoForm, ProdutoForm
 ONLINE = timedelta(seconds=30)
 
 
+def impressora_legivel(bar, valor, vazio='padrão do bar'):
+    """Transforma o endereço guardado (vazio / IP / pdv:id) em texto para o gerente."""
+    if not valor:
+        return vazio
+    if valor.startswith('pdv:'):
+        ap = bar.aparelhos.filter(device_id=valor[4:]).first()
+        return f'Maquininha: {ap.modelo}' if ap and ap.modelo else f'Maquininha {valor[4:][-6:]}'
+    return f'WiFi {valor}'
+
+
 # ------------------------------------------------------------------ acesso
 
 def gerente_requerido(view):
@@ -220,14 +230,19 @@ def esgotado(request, pk):
 
 @gerente_requerido
 def setores(request):
+    setores = list(Setor.objects.filter(bar=request.bar).annotate(n=Count('produtos')))
+    for s in setores:
+        s.destino = impressora_legivel(request.bar, s.impressora)
     return render(request, 'painel/setores.html', {
-        'setores': Setor.objects.filter(bar=request.bar).annotate(n=Count('produtos'))})
+        'setores': setores,
+        'impressora_bar': impressora_legivel(request.bar, request.bar.impressora, vazio='não configurada'),
+        'impressora_conta': impressora_legivel(request.bar, request.bar.impressora_conta, vazio='impressora padrão do bar')})
 
 
 @gerente_requerido
 def setor(request, pk=None):
     obj = get_object_or_404(Setor, bar=request.bar, pk=pk) if pk else Setor(bar=request.bar)
-    form = SetorForm(request.POST or None, instance=obj)
+    form = SetorForm(request.POST or None, instance=obj, bar=request.bar)
     if request.method == 'POST':
         if 'apagar' in request.POST and obj.pk:
             try:

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app.dart';
+import '../dados/modelos.dart';
 import '../impressao/impressora.dart';
 import '../sistema.dart';
 import 'bateria.dart';
@@ -143,8 +144,9 @@ class _TelaStatusState extends State<TelaStatus> {
                   child: Text('Imprimir ${a.cuponsNaoImpressos} cupom(ns) pendente(s)'),
                 ),
               ),
-            const _Titulo('Setores de impressão'),
-            for (final s in a.boot!.setores) linha(s.nome, s.impressora.isEmpty ? 'impressora do bar' : s.impressora),
+            const _Titulo('Para onde imprime'),
+            linha('Conta', a.temImpressoraInterna ? 'esta maquininha' : _destino(a, a.boot!.impressoraDaConta)),
+            for (final s in a.boot!.setores) linha(s.nome, _destino(a, a.boot!.impressoraDoSetor(s.nome))),
             const _Titulo('Rede local (Wi-Fi do bar)'),
             if (!a.rede.ativa) const ListTile(dense: true, title: Text('Desligada (entre com o PIN)')),
             if (a.rede.ativa) ...[
@@ -235,6 +237,21 @@ class _TelaStatusState extends State<TelaStatus> {
       },
     );
   }
+}
+
+/// Endereço de impressora em texto amigável (usa a lista de aparelhos para nomear os PDVs).
+String _destino(App a, String alvo) {
+  if (alvo.isEmpty) return 'impressora do bar';
+  if (DestinoPdv.ehPdv(alvo)) {
+    final id = DestinoPdv.id(alvo);
+    if (id == a.deviceId) return 'esta maquininha';
+    for (final x in a.aparelhos) {
+      if (x['device_id'] == id && (x['modelo'] ?? '').toString().isNotEmpty) return 'maquininha ${x['modelo']}';
+    }
+    return 'maquininha ${id.substring(id.length - 6)}';
+  }
+  if (Impressora.ehInterna(alvo)) return 'maquininha (líder)';
+  return 'WiFi $alvo';
 }
 
 class _Titulo extends StatelessWidget {

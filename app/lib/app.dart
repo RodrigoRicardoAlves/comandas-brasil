@@ -80,6 +80,7 @@ class App extends ChangeNotifier {
   int? bateria;
   bool carregando = false;
   String impressoraLocal = ''; // substitui a impressora do bar neste celular (testes)
+  bool temImpressoraInterna = false; // este aparelho é uma maquininha com impressora embutida (Sunmi)
   Map<String, dynamic>? atualizacao; // versão nova do app disponível para baixar
   int _ultimaChecagemVersao = 0;
 
@@ -131,6 +132,7 @@ class App extends ChangeNotifier {
     if (usuario == null && api.token != null) await trocarUsuario();
     await _recalcular();
     Sistema.iniciar();
+    temImpressoraInterna = await Sistema.temImpressoraInterna();
     unawaited(agendarSegundoPlano());
     if (logado) unawaited(rede.iniciar());
     _timer = Timer.periodic(const Duration(seconds: 4), (_) => ciclo());
@@ -445,7 +447,7 @@ class App extends ChangeNotifier {
 
   Future<void> imprimirConta(ComandaC c, {required bool servico, required int pessoas}) async {
     _exigirLogin();
-    await _imprimir(_alvo(''), (b) => cupomConta(b, c, servico: servico, pessoas: pessoas));
+    await _imprimir(_alvoConta(), (b) => cupomConta(b, c, servico: servico, pessoas: pessoas));
     erroImpressora = null;
     await _registrar('conta_impressa', {'comanda': c.uuid, 'servico': servico, 'pessoas': pessoas});
   }
@@ -538,19 +540,33 @@ class App extends ChangeNotifier {
     return boot!.impressoraDoSetor(setor);
   }
 
+  /// A conta numa maquininha (Sunmi) imprime nela mesma; num celular sem impressora,
+  /// vai para a impressora escolhida no painel (ou a do bar).
+  String _alvoConta() {
+    if (temImpressoraInterna) return Impressora.interna;
+    if (impressoraLocal.isNotEmpty) return impressoraLocal;
+    return boot!.impressoraDaConta;
+  }
+
   void _erroImpressao(Object e) {
     erroImpressora = e is ErroImpressora ? e.msg : 'Falha na impressora: $e';
     notifyListeners();
   }
 
-  /// Só o líder imprime os pedidos (de todos os celulares). Enquanto a eleição não termina
-  /// (primeiros segundos), ninguém imprime.
-  bool _imprimoEste(PedidoC p) => rede.souLider;
+  /// Quem imprime este cupom (pedido + setor):
+  /// - destino `pdv:<id>`: só a maquininha daquele id, na própria impressora embutida;
+  /// - WiFi ou embutida comum: o líder (enquanto a eleição não termina, ninguém imprime).
+  bool _euImprimo(PedidoC p, String setor) {
+    final alvo = _alvo(setor);
+    if (DestinoPdv.ehPdv(alvo)) return DestinoPdv.id(alvo) == deviceId;
+    return rede.souLider;
+  }
 
-  /// Envia para a impressora: direto se for o líder, senão pede ao líder.
-  /// O cupom é montado para o papel do destino (a maquininha usa papel estreito).
+  /// Envia para a impressora: direto se for o líder/dono, senão passa pela rede.
+  /// O cupom é montado para o papel do destino (maquininha/PDV usam papel estreito).
   Future<void> _imprimir(String alvo, List<int> Function(BarCfg b) cupom) {
-    final b = Impressora.ehInterna(alvo) ? boot!.bar.paraMaquininha : boot!.bar;
+    final estreito = Impressora.ehInterna(alvo) || DestinoPdv.ehPdv(alvo);
+    final b = estreito ? boot!.bar.paraMaquininha : boot!.bar;
     return rede.imprimir(alvo, cupom(b));
   }
 
@@ -565,7 +581,7 @@ class App extends ChangeNotifier {
     if (_imprimindo || boot == null) return;
     _imprimindo = true;
     try {
-      for (final (p, setor) in estado.cuponsPendentes(meu: _imprimoEste)) {
+      for (final (p, setor) in estado.cuponsPendentes(meu: _euImprimo)) {
         final ref = '${p.uuid}:$setor';
         final (n, ultima) = _tentativasImpressao[ref] ?? (0, 0);
         // nova tentativa com espera crescente (até 1 min); nunca desiste
@@ -627,7 +643,7 @@ class App extends ChangeNotifier {
     } catch (_) {}
   }
 
-  int get cuponsNaoImpressos => estado.cuponsPendentes(meu: _imprimoEste).length;
+  int get cuponsNaoImpressos => estado.cuponsPendentes(meu: _euImprimo).length;
 
   Future<void> reimprimirPedido(PedidoC p) async {
     final c = estado.comandas[p.comanda]!;

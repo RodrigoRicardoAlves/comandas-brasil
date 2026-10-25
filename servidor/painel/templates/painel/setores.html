@@ -2,12 +2,13 @@
 {% block titulo %}Setores{% endblock %}
 {% block conteudo %}
 <div class="linha"><h1 class="esp">Setores de impressão</h1><a class="btn prim" href="{% url 'painel:setor_novo' %}">+ Setor</a></div>
-<p class="suave">Um pedido com itens de setores diferentes sai em cupons separados, um por setor. Impressora padrão do bar:
-  <b>{{ request.bar.impressora|default:"não configurada" }}</b> (<a href="{% url 'painel:config' %}">mudar</a>).</p>
+<p class="suave">Um pedido com itens de setores diferentes sai em cupons separados, um por setor.<br>
+  Impressora padrão do bar: <b>{{ impressora_bar }}</b> · Conta: <b>{{ impressora_conta }}</b>
+  (<a href="{% url 'painel:config' %}">mudar</a>).</p>
 <div class="tabela"><table>
   <tr><th>Setor</th><th>Impressora</th><th class="v">Produtos</th></tr>
   {% for s in setores %}<tr><td><a href="{% url 'painel:setor' s.pk %}"><b>{{ s.nome }}</b></a></td>
-    <td>{{ s.impressora|default:"padrão do bar" }}</td><td class="v">{{ s.n }}</td></tr>
+    <td>{{ s.destino }}</td><td class="v">{{ s.n }}</td></tr>
   {% empty %}<tr><td class="suave">Nenhum setor ainda.</td></tr>{% endfor %}
 </table></div>
 {% endblock %}

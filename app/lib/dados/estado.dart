@@ -289,14 +289,14 @@ class Estado {
   bool emConflito(ComandaC c) => c.aberta && abertaComNumero(c.numero, exceto: c.uuid) != null;
 
   /// Cupons de pedido ainda não impressos: (pedido, setor).
-  List<(PedidoC, String)> cuponsPendentes({required bool Function(PedidoC) meu, int horas = 6}) {
+  List<(PedidoC, String)> cuponsPendentes({required bool Function(PedidoC, String) meu, int horas = 6}) {
     final corte = DateTime.now().subtract(Duration(hours: horas)).millisecondsSinceEpoch;
     final out = <(PedidoC, String)>[];
     for (final p in pedidos.values) {
       // pedido atrasado só imprime depois que o gerente decidir
-      if (p.hora < corte || !p.conta || !meu(p)) continue;
+      if (p.hora < corte || !p.conta) continue;
       for (final s in p.setores) {
-        if (!impressos.contains('${p.uuid}:$s')) out.add((p, s));
+        if (!impressos.contains('${p.uuid}:$s') && meu(p, s)) out.add((p, s));
       }
     }
     out.sort((a, b) => a.$1.hora.compareTo(b.$1.hora));

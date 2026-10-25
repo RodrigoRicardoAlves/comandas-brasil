@@ -41,16 +41,81 @@ class EntrarForm(forms.Form):
     pin = forms.CharField(label='PIN de gerente', max_length=8, widget=forms.PasswordInput(attrs={'inputmode': 'numeric'}))
 
 
-class BarForm(forms.ModelForm):
+def escolhas_destino(bar, vazio='Impressora padrão do bar', atual=''):
+    """Lista de destinos de impressão: padrão do bar, WiFi (IP) ou uma maquininha conhecida."""
+    escolhas = [('', vazio), ('wifi', 'Impressora WiFi (digite o IP abaixo)')]
+    vistos = set()
+    for ap in bar.aparelhos.exclude(modelo='').order_by('modelo', 'id'):
+        chave = f'pdv:{ap.device_id}'
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        rotulo = f'Maquininha: {ap.modelo}'
+        if ap.usuario_id:
+            rotulo += f' ({ap.usuario.nome})'
+        escolhas.append((chave, f'{rotulo} · {ap.device_id[-6:]}'))
+    # um PDV escolhido antes que não está mais na lista (desligado/apagado) continua selecionável
+    if atual.startswith('pdv:') and atual not in vistos:
+        escolhas.append((atual, f'Maquininha {atual[4:][-6:]} (fora do ar)'))
+    return escolhas
+
+
+class DestinoImpressoraMixin:
+    """Adiciona um par de campos (destino + IP WiFi) que gravam num CharField de endereço."""
+
+    def _add_destino(self, campo, bar, label, vazio):
+        atual = getattr(self.instance, campo, '') or ''
+        self.fields[f'{campo}_destino'] = forms.ChoiceField(
+            label=label, required=False, choices=escolhas_destino(bar, vazio=vazio, atual=atual))
+        self.fields[f'{campo}_wifi'] = forms.CharField(
+            label=f'{label} — IP da impressora WiFi', required=False, max_length=80,
+            widget=forms.TextInput(attrs={'placeholder': 'ex.: 192.168.1.50:9100'}),
+            help_text='Só é usado quando o destino acima for "Impressora WiFi".')
+        if atual.startswith('pdv:'):
+            self.initial[f'{campo}_destino'], self.initial[f'{campo}_wifi'] = atual, ''
+        elif atual:
+            self.initial[f'{campo}_destino'], self.initial[f'{campo}_wifi'] = 'wifi', atual
+        else:
+            self.initial[f'{campo}_destino'], self.initial[f'{campo}_wifi'] = '', ''
+
+    def _resolver_destino(self, campo):
+        destino = self.cleaned_data.get(f'{campo}_destino', '')
+        if destino == 'wifi':
+            return (self.cleaned_data.get(f'{campo}_wifi') or '').strip()
+        if destino.startswith('pdv:'):
+            return destino
+        return ''
+
+
+class BarForm(DestinoImpressoraMixin, forms.ModelForm):
     class Meta:
         model = Bar
-        fields = ['nome', 'rodape', 'taxa_servico', 'max_comanda', 'impressora', 'colunas_papel', 'codificacao', 'cortar_papel']
+        fields = ['nome', 'rodape', 'taxa_servico', 'max_comanda', 'colunas_papel', 'codificacao', 'cortar_papel']
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self._add_destino('impressora', self.instance, 'Impressora padrão', 'Não configurada')
+        self._add_destino('impressora_conta', self.instance, 'Impressora da conta', 'Usar a impressora padrão')
+
+    def save(self, commit=True):
+        self.instance.impressora = self._resolver_destino('impressora')
+        self.instance.impressora_conta = self._resolver_destino('impressora_conta')
+        return super().save(commit)
 
 
-class SetorForm(forms.ModelForm):
+class SetorForm(DestinoImpressoraMixin, forms.ModelForm):
     class Meta:
         model = Setor
-        fields = ['nome', 'impressora', 'ordem']
+        fields = ['nome', 'ordem']
+
+    def __init__(self, *a, bar, **kw):
+        super().__init__(*a, **kw)
+        self._bar = bar
+        self._add_destino('impressora', bar, 'Impressora deste setor', 'Impressora padrão do bar')
+
+    def save(self, commit=True):
+        self.instance.impressora = self._resolver_destino('impressora')
+        return super().save(commit)
 
 
 class CategoriaForm(forms.ModelForm):
