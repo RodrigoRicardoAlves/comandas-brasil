@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sitemaps',
     'django_q',
     'bares',
     'contas',
@@ -65,6 +66,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'publico.context_processors.analytics',
             ],
         },
     },
@@ -125,3 +127,6 @@ Q_CLUSTER = {
     'catch_up': False,  # se o servidor ficou parado, não roda as vezes perdidas, só a próxima
 }
 SILENCED_SYSTEM_CHECKS = ['models.W037']  # índice condicional do django-q2: o MariaDB ignora, sem efeito
+
+# Google Tag Manager / Analytics (vazio = desligado)
+GTM_ID = os.getenv('GTM_ID', '').strip()
