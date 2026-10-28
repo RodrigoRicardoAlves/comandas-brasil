@@ -1,7 +1,7 @@
 {% extends "painel/base.html" %}{% load static %}
 {% block titulo %}Entrar{% endblock %}
 {% block conteudo %}
-<img src="{% static 'publico/logo.png' %}?v=3" alt="Comandas Brasil" style="display:block;width:100%;max-width:380px;margin:30px auto 0">
+<img src="{% static 'publico/logo.png' %}" alt="Comandas Brasil" style="display:block;width:100%;max-width:380px;margin:30px auto 0">
 <div class="card" style="max-width:380px;margin:10px auto 60px">
   <h1>Painel do gerente</h1>
   <form method="post">{% csrf_token %}

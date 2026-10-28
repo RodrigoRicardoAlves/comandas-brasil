@@ -12,7 +12,7 @@ entre os aparelhos e com o servidor quando há internet, **sem duplicar**.
 ![Plataforma](https://img.shields.io/badge/App-Android%20(Flutter)-02569B.svg)
 ![Servidor](https://img.shields.io/badge/Servidor-Django-092E20.svg)
 
-**▶ Versão pronta, hospedada e com suporte:** https://bar.rodrigoricardo.eng.br
+**▶ Versão pronta, hospedada e com suporte:** https://comandasbrasil.com.br
 <br>Prefere rodar por conta própria? O código é aberto (MIT) — baixe e use.
 
 </div>

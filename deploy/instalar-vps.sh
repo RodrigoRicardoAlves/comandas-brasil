@@ -5,7 +5,7 @@
 # Rode como root. Não sobrescreve um .env já existente.
 #
 # Uso:
-#   DOMINIO=bar.rodrigoricardo.eng.br DB_SENHA='xxxxx' bash instalar-vps.sh
+#   DOMINIO=comandasbrasil.com.br DB_SENHA='xxxxx' bash instalar-vps.sh
 #
 # Variáveis:
 #   DOMINIO     (obrigatória)  domínio do site
@@ -107,9 +107,6 @@ fi
 echo "== Migrações e arquivos estáticos =="
 sudo -u "$USUARIO" bash -c "cd '$DESTINO/servidor' && ../.venv/bin/python manage.py migrate --noinput && ../.venv/bin/python manage.py collectstatic --noinput"
 sudo -u "$USUARIO" mkdir -p "$DESTINO/servidor/media/app"
-# o home do usuário costuma vir 750; o nginx (www-data) precisa atravessar e ler estáticos/media
-chmod o+x "$DESTINO" "$DESTINO/servidor"
-chmod -R o+rX "$DESTINO/servidor/staticfiles" "$DESTINO/servidor/media"
 
 echo "== Serviços systemd =="
 sed "s#127.0.0.1:8100#127.0.0.1:$porta#" "$DESTINO/deploy/comandas.service" > /etc/systemd/system/comandas.service
@@ -120,7 +117,7 @@ systemctl enable --now comandas comandas-q
 echo "== nginx =="
 tmp=$(mktemp)
 sed -e "s#127.0.0.1:8100#127.0.0.1:$porta#" \
-    -e "s#server_name bar.rodrigoricardo.eng.br;#server_name $DOMINIO;#" \
+    -e "s#server_name [^;]*;#server_name $DOMINIO;#" \
     "$DESTINO/deploy/nginx.conf" > "$tmp"
 if [ "$HTTPS_FRONT" = "cloudflare" ]; then
   # a Cloudflare termina o HTTPS e fala http com o nginx: fixa o proto como https

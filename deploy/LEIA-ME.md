@@ -20,7 +20,7 @@ Para levar os dados do PC: `mysqldump bar > bar.sql` no PC e `mysql bar < bar.sq
 
 ## 3. Configuração
 Copie `.env.example` para `/srv/comandas/.env` e preencha: `SECRET_KEY` (nova, longa), `DEBUG=0`,
-`HTTPS=1`, `ALLOWED_HOSTS=bar.rodrigoricardo.eng.br`, `CSRF_TRUSTED_ORIGINS=https://bar.rodrigoricardo.eng.br`,
+`HTTPS=1`, `ALLOWED_HOSTS=comandasbrasil.com.br`, `CSRF_TRUSTED_ORIGINS=https://comandasbrasil.com.br`,
 dados do banco, `SITE_URL`, `CONTATO_EMAIL`.
 
 ## 4. Python e arquivos

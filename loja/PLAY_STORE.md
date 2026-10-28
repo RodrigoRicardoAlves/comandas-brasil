@@ -4,7 +4,7 @@
 - App assinado com chave própria (`~/chaves-comandas/`), pacote `br.eng.rodrigoricardo.comandas`.
 - Pacote para a loja: `AAB=1 app/publicar.sh "notas"` gera `loja/comandas-<versão>.aab`.
 - Ícone 512 px: `loja/icone-512.png`. Logo: `loja/logo.png`.
-- Política de privacidade: https://bar.rodrigoricardo.eng.br/privacidade/ (defina `CONTATO_EMAIL` no .env).
+- Política de privacidade: https://comandasbrasil.com.br/privacidade/ (defina `CONTATO_EMAIL` no .env).
 
 ## Falta (feito por você no Play Console)
 1. Conta de desenvolvedor Google (taxa única) e verificação de identidade.

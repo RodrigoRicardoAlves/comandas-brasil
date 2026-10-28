@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 /// Conversa com o servidor (VPS).
 class Api {
-  String base; // ex.: https://bar.rodrigoricardo.eng.br
+  String base; // ex.: https://comandasbrasil.com.br
   String? token;
   Api(this.base, {this.token});
 

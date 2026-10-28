@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Gera o APK assinado e publica em https://bar.rodrigoricardo.eng.br/app/ (pasta media do servidor).
+# Gera o APK assinado e publica em https://comandasbrasil.com.br/app/ (pasta media do servidor).
 # Uso:   ./publicar.sh "o que mudou nesta versão"
 # Antes: suba o número em pubspec.yaml (version: 1.0.1+2 — o número depois do + precisa crescer sempre).
 # Opções: SERVIDOR=http://192.168.3.19:8100 ./publicar.sh   (endereço padrão embutido no app)
@@ -7,7 +7,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 NOTAS="${1:-}"
-SERVIDOR="${SERVIDOR:-https://bar.rodrigoricardo.eng.br}"
+SERVIDOR="${SERVIDOR:-https://comandasbrasil.com.br}"
 [ -f android/key.properties ] || { echo "Falta android/key.properties (chave de assinatura em ~/chaves-comandas)"; exit 1; }
 
 VERSAO=$(grep '^version:' pubspec.yaml | sed 's/version: *//')

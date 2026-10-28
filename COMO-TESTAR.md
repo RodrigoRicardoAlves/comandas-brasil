@@ -4,11 +4,11 @@ Endereços (com o PC ligado e o túnel da Cloudflare no ar):
 
 | O quê | Onde |
 |---|---|
-| Página inicial | https://bar.rodrigoricardo.eng.br/ |
-| Baixar o app (garçons) | https://bar.rodrigoricardo.eng.br/app/ |
-| Painel do gerente | https://bar.rodrigoricardo.eng.br/painel/ — código `zemaria`, PIN de gerente `9999` |
-| Cardápio do cliente (QR) | https://bar.rodrigoricardo.eng.br/c/zemaria/ |
-| Admin (super admin, criar bares) | https://bar.rodrigoricardo.eng.br/admin/ |
+| Página inicial | https://comandasbrasil.com.br/ |
+| Baixar o app (garçons) | https://comandasbrasil.com.br/app/ |
+| Painel do gerente | https://comandasbrasil.com.br/painel/ — código `zemaria`, PIN de gerente `9999` |
+| Cardápio do cliente (QR) | https://comandasbrasil.com.br/c/zemaria/ |
+| Admin (super admin, criar bares) | https://comandasbrasil.com.br/admin/ |
 
 PINs de exemplo do bar zemaria: Zé Maria (gerente) `9999`, Maria `5678`. O do João foi trocado no painel.
 

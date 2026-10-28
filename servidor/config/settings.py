@@ -96,13 +96,18 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Nome com hash do conteúdo (logo.3f2a1b.png): permite cache longo na Cloudflare/navegador.
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'},
+}
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # endereço público (vai no QR Code do cardápio)
-SITE_URL = env('SITE_URL', 'https://bar.rodrigoricardo.eng.br').rstrip('/')
+SITE_URL = env('SITE_URL', 'https://comandasbrasil.com.br').rstrip('/')
 # e-mail de contato mostrado na política de privacidade (exigida pela Play Store)
 CONTATO_EMAIL = env('CONTATO_EMAIL', '')
 
