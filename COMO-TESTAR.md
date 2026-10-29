@@ -6,11 +6,12 @@ Endereços (com o PC ligado e o túnel da Cloudflare no ar):
 |---|---|
 | Página inicial | https://comandasbrasil.com.br/ |
 | Baixar o app (garçons) | https://comandasbrasil.com.br/app/ |
-| Painel do gerente | https://comandasbrasil.com.br/painel/ — código `zemaria`, PIN de gerente `9999` |
-| Cardápio do cliente (QR) | https://comandasbrasil.com.br/c/zemaria/ |
+| Painel do gerente | https://comandasbrasil.com.br/painel/ — código `tupinamba`, PIN de gerente `9999` |
+| Cardápio do cliente (QR) | https://comandasbrasil.com.br/c/tupinamba/ |
 | Admin (super admin, criar bares) | https://comandasbrasil.com.br/admin/ |
 
-PINs de exemplo do bar zemaria: Zé Maria (gerente) `9999`, Maria `5678`. O do João foi trocado no painel.
+PINs de exemplo do bar tupinamba: Seu Antônio (gerente) `9999`, João `1234`, Maria `5678`.
+Para criar (ou recriar) o bar de teste: `python manage.py criar_tupinamba`.
 
 ## Ligar o servidor no PC
 ```bash
@@ -18,11 +19,11 @@ cd ~/PycharmProjects/comandas/servidor
 ../.venv/bin/python manage.py runserver --insecure 0.0.0.0:8100
 ../.venv/bin/python tools/impressora_fake.py   # impressora de mentira (porta 9100), se não houver uma real
 ```
-No painel → Configurações, a "impressora padrão" do Zé Maria aponta para o PC (`192.168.3.19:9100`).
+No painel → Configurações, a "impressora padrão" do Tupinambá aponta para o PC (`192.168.3.19:9100`).
 Com impressora de verdade, troque pelo IP dela.
 
 ## Roteiro rápido
-1. **Instalar:** no celular, abra `/app/`, baixe e instale. Primeiro acesso: código `zemaria` + PIN.
+1. **Instalar:** no celular, abra `/app/`, baixe e instale. Primeiro acesso: código `tupinamba` + PIN.
    O guia de bateria abre sozinho: faça os passos.
 2. **Atender:** abra comanda, lance cerveja + porção + espetinho → saem 2 cupons (cozinha e churrasqueira).
 3. **Conta:** Conta → 10% → dividir → Imprimir → Fechar.

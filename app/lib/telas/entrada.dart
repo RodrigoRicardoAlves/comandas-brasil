@@ -46,7 +46,7 @@ class _TelaEntradaState extends State<TelaEntrada> {
                 const SizedBox(height: 28),
                 TextField(
                   controller: _bar,
-                  decoration: const InputDecoration(labelText: 'Código do bar', hintText: 'ex.: zemaria'),
+                  decoration: const InputDecoration(labelText: 'Código do bar', hintText: 'ex.: tupinamba'),
                   autocorrect: false,
                   textInputAction: TextInputAction.next,
                 ),

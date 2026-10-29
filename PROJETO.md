@@ -34,7 +34,7 @@ cardápio público por QR com "chamar garçom".
 | Coordenação local | Um celular vira **líder** automaticamente; os outros sincronizam com ele. |
 | Servidor | **Django** + **Django Ninja** (API) + **MariaDB**. Django Admin = painel do super admin. |
 | Multi-bar | Para conhecidos: sem cobrança, sem bloqueio. Super admin cadastra os bares. |
-| Domínio | `bar.rodrigoricardo.eng.br` (túnel Cloudflare em dev). Cardápio: `/c/<slug>`, ex. `/c/zemaria`. |
+| Domínio | `bar.rodrigoricardo.eng.br` (túnel Cloudflare em dev). Cardápio: `/c/<slug>`, ex. `/c/tupinamba`. |
 | Impressora | Padrão inicial: térmica 80mm, ESC/POS, TCP porta 9100, 48 colunas. Ajustar quando houver uma real. |
 | Conflito de número | As duas comandas ficam **bloqueadas para novos pedidos** até uma delas ser fechada. |
 | Conta | O cupom da conta **sempre** imprime (independe de setor). |
