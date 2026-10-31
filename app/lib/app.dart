@@ -121,6 +121,11 @@ class App extends ChangeNotifier {
       buildApp = int.tryParse(pk.buildNumber) ?? 0;
     } catch (_) {}
     servidor = await banco.ler('servidor') ?? servidorPadrao;
+    // o sistema mudou de endereço: celulares que entraram pelo domínio antigo passam para o novo
+    if (servidor.contains('bar.rodrigoricardo.eng.br')) {
+      servidor = 'https://comandasbrasil.com.br';
+      await banco.gravar('servidor', servidor);
+    }
     impressoraLocal = await banco.ler('impressora_local') ?? '';
     api = Api(servidor, token: await banco.ler('token'));
     _ultimoSeq = int.tryParse(await banco.ler('ultimo_seq') ?? '') ?? 0;

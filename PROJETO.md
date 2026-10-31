@@ -34,7 +34,7 @@ cardápio público por QR com "chamar garçom".
 | Coordenação local | Um celular vira **líder** automaticamente; os outros sincronizam com ele. |
 | Servidor | **Django** + **Django Ninja** (API) + **MariaDB**. Django Admin = painel do super admin. |
 | Multi-bar | Para conhecidos: sem cobrança, sem bloqueio. Super admin cadastra os bares. |
-| Domínio | `bar.rodrigoricardo.eng.br` (túnel Cloudflare em dev). Cardápio: `/c/<slug>`, ex. `/c/tupinamba`. |
+| Domínio | `comandasbrasil.com.br` (VPS). Cardápio: `/c/<slug>`, ex. `/c/tupinamba`. |
 | Impressora | Padrão inicial: térmica 80mm, ESC/POS, TCP porta 9100, 48 colunas. Ajustar quando houver uma real. |
 | Conflito de número | As duas comandas ficam **bloqueadas para novos pedidos** até uma delas ser fechada. |
 | Conta | O cupom da conta **sempre** imprime (independe de setor). |
@@ -267,8 +267,8 @@ rede principal do bar."
   `DATABASE_NAME`, `DATABASE_USER`, `DATABASE_PASSWORD`, `DATABASE_HOST`,
   `DATABASE_PORT`, `SECRET_KEY`, `DEBUG`, `ALLOWED_HOSTS`, `CSRF_TRUSTED_ORIGINS`.
   Fornecer `.env.example` sem senhas.
-- Dev: MariaDB local (banco `bar`), `runserver` ou gunicorn, túnel Cloudflare
-  `bar.rodrigoricardo.eng.br → localhost:8000`.
+- Dev: MariaDB local (banco `bar`), `runserver`. Produção: VPS com gunicorn + nginx
+  (`comandasbrasil.com.br`, ver `deploy/`).
 
 ## 10. App Flutter
 
@@ -396,7 +396,7 @@ Cada etapa termina com algo testável.
     A página acompanha o chamado e mostra "o garçom já está vindo" quando ele toca em Atendido.
   - Testado de ponta a ponta: cliente chamou pela página no Samsung → cupom "GARÇOM!" saiu pelo líder
     (Xiaomi) → aviso no app → Atendido → página do cliente atualizou.
-  - `SITE_URL` no .env define o endereço do QR (padrão https://bar.rodrigoricardo.eng.br).
+  - `SITE_URL` no .env define o endereço do QR (padrão https://comandasbrasil.com.br).
 - 2026-10-22: **um garçom só pode estar em um celular por vez** (pedido do dono). Três barreiras:
   servidor (`/login` devolve 409 se o mesmo usuário está em outro aparelho com contato nos últimos
   2 min; se o outro sumiu há mais tempo, a sessão velha cai e ele recebe 401 → volta para o PIN),
