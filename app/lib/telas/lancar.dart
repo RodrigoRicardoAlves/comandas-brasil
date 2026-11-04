@@ -22,7 +22,7 @@ class _TelaLancarState extends State<TelaLancar> {
 
   void _adicionar(Produto p, Variante v) {
     setState(() {
-      final igual = _carrinho.where((i) => i.variante.id == v.id && i.obs.isEmpty).firstOrNull;
+      final igual = p.ehAvulso ? null : _carrinho.where((i) => i.variante.id == v.id && i.obs.isEmpty).firstOrNull;
       if (igual != null) {
         igual.qtd++;
       } else {
@@ -59,6 +59,72 @@ class _TelaLancarState extends State<TelaLancar> {
         ]),
       ),
     );
+  }
+
+  /// Produto fora do cardápio: o garçom digita nome e preço.
+  Future<void> _avulso() async {
+    final setores = App.i.boot!.setores.map((s) => s.nome).toList();
+    final nomeCtl = TextEditingController();
+    final precoCtl = TextEditingController();
+    final chave = GlobalKey<FormState>();
+    var setor = '';
+    final p = await showDialog<Produto>(
+      context: context,
+      builder: (c) => StatefulBuilder(
+        builder: (c, set) {
+          void ok() {
+            if (!chave.currentState!.validate()) return;
+            Navigator.pop(c, Produto.avulso(limpo(nomeCtl.text, 60), lerCentavos(precoCtl.text)!, setor: setor));
+          }
+
+          return AlertDialog(
+            title: const Text('Produto avulso'),
+            content: Form(
+              key: chave,
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                TextFormField(
+                  controller: nomeCtl,
+                  autofocus: true,
+                  maxLength: 60,
+                  textCapitalization: TextCapitalization.sentences,
+                  decoration: const InputDecoration(labelText: 'Nome do produto'),
+                  validator: (v) => limpo(v, 60).isEmpty ? 'Digite o nome' : null,
+                ),
+                TextFormField(
+                  controller: precoCtl,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(labelText: 'Preço', prefixText: 'R\$ ', hintText: '0,00'),
+                  validator: (v) {
+                    final c = lerCentavos(v);
+                    if (c == null || c <= 0) return 'Preço inválido';
+                    if (c > 100000) return 'Máximo R\$ 1.000,00';
+                    return null;
+                  },
+                  onFieldSubmitted: (_) => ok(),
+                ),
+                if (setores.isNotEmpty)
+                  DropdownButtonFormField<String>(
+                    initialValue: setor,
+                    decoration: const InputDecoration(labelText: 'Imprimir cupom'),
+                    items: [
+                      const DropdownMenuItem(value: '', child: Text('Não imprime')),
+                      for (final s in setores) DropdownMenuItem(value: s, child: Text(s)),
+                    ],
+                    onChanged: (v) => set(() => setor = v ?? ''),
+                  ),
+              ]),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(c), child: const Text('Voltar')),
+              FilledButton(onPressed: ok, child: const Text('Adicionar')),
+            ],
+          );
+        },
+      ),
+    );
+    nomeCtl.dispose();
+    precoCtl.dispose();
+    if (p != null && mounted) _adicionar(p, p.variantes.first);
   }
 
   Future<void> _revisar() async {
@@ -148,6 +214,9 @@ class _TelaLancarState extends State<TelaLancar> {
       child: Scaffold(
         appBar: AppBar(
           title: Text('Pedido · ${c.numero} ${c.nome}'),
+          actions: [
+            TextButton.icon(onPressed: _avulso, icon: const Icon(Icons.edit_note), label: const Text('Avulso')),
+          ],
           bottom: TabBar(isScrollable: true, tabAlignment: TabAlignment.start, tabs: [for (final k in cats) Tab(text: k.nome)]),
         ),
         body: TabBarView(children: [

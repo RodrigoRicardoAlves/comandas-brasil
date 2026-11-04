@@ -420,7 +420,7 @@ class App extends ChangeNotifier {
         for (final it in carrinho)
           {
             'item': _uuid.v4(),
-            'variante_id': it.variante.id,
+            'variante_id': it.produto.ehAvulso ? null : it.variante.id,
             'categoria': it.produto.categoria,
             'produto': it.produto.nome,
             'variante': it.variante.nome,

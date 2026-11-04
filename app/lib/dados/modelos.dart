@@ -63,6 +63,9 @@ class Variante {
       : id = j['id'],
         nome = j['nome'] ?? '',
         preco = j['preco'];
+  const Variante.avulsa(this.preco)
+      : id = 0,
+        nome = '';
 }
 
 class Produto {
@@ -79,6 +82,18 @@ class Produto {
         esgotado = j['esgotado'] ?? false,
         imprime = j['imprime'] ?? false,
         variantes = [for (final v in j['variantes']) Variante.json(v)];
+
+  /// Produto coringa: fora do cardápio, nome e preço digitados pelo garçom (id 0).
+  Produto.avulso(this.nome, int preco, {this.setor = ''})
+      : id = 0,
+        descricao = '',
+        esgotado = false,
+        imprime = setor != '',
+        variantes = [Variante.avulsa(preco)] {
+    categoria = 'Avulso';
+  }
+
+  bool get ehAvulso => id == 0;
 }
 
 class Categoria {
