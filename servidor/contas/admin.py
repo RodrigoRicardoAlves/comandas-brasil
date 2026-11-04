@@ -5,7 +5,7 @@ from .models import Aparelho, AparelhoArquivado, Usuario
 
 
 class UsuarioForm(forms.ModelForm):
-    pin = forms.CharField(label='PIN', required=False, max_length=8,
+    novo_pin = forms.CharField(label='PIN', required=False, max_length=8,
                           help_text='4 a 8 números. Deixe vazio para manter o atual.')
 
     class Meta:
@@ -14,19 +14,19 @@ class UsuarioForm(forms.ModelForm):
 
     def clean(self):
         d = super().clean()
-        pin = d.get('pin')
+        pin = d.get('novo_pin')
         if not self.instance.pk and not pin:
-            self.add_error('pin', 'Informe o PIN')
+            self.add_error('novo_pin', 'Informe o PIN')
         if pin and d.get('bar'):
             self.instance.bar = d['bar']
             try:
                 self.instance.definir_pin(pin)
             except ValueError as e:
-                self.add_error('pin', str(e))
+                self.add_error('novo_pin', str(e))
                 return d
             dup = Usuario.objects.filter(bar=d['bar'], pin_hash=self.instance.pin_hash).exclude(pk=self.instance.pk)
             if dup.exists():
-                self.add_error('pin', 'Outra pessoa deste bar já usa esse PIN')
+                self.add_error('novo_pin', 'Outra pessoa deste bar já usa esse PIN')
         return d
 
 
